@@ -730,33 +730,125 @@
         </table>
       </div>
 
-      <!-- VIEW C: THE MOVIE SCREEN PREVIEW (.ASS Font) -->
+      <!-- VIEW C: THE MOVIE SCREEN PREVIEW (.ASS Dual-Language Styling Studio) -->
       <div id="cinemaViewContainer" class="hidden">
-        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <label style="font-size:12.5px; font-weight:700;">预览台词:</label>
+        <!-- Top Bar: Cue Stepper + Presets + Layout Order -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--border);">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <label style="font-size:12.5px; font-weight:800;">预览台词:</label>
             <button type="button" class="btn" style="padding:4px 8px; font-size:12px;" onclick="stepCinemaCue(-1)">◀ 上一句</button>
             <select id="cinemaCueSelect" class="clean-select" style="width:auto; max-width:210px; padding:5px 8px; font-size:12.5px;" onchange="onCinemaCueSelect()"></select>
             <button type="button" class="btn" style="padding:4px 8px; font-size:12px;" onclick="stepCinemaCue(1)">下一句 ▶</button>
-
-            <label style="font-size:12.5px; font-weight:700; margin-left:4px;">字体:</label>
-            <select id="assFontSelect" class="clean-select" style="width:auto; padding:5px 10px; font-size:13px;" onchange="renderCinema()">
-              <option value="'Noto Serif SC', 'Songti SC', serif" data-ass-name="Source Han Serif SC" selected>思源宋体 (院线电影感)</option>
-              <option value="'PingFang SC', 'Microsoft YaHei', sans-serif" data-ass-name="PingFang SC">苹方 / 微软雅黑 (现代无衬线)</option>
-              <option value="'Kaiti SC', 'STKaiti', serif" data-ass-name="Kaiti SC">经典楷体</option>
-            </select>
-
-            <label style="font-size:12.5px; font-weight:700;">颜色:</label>
-            <select id="assColorSelect" class="clean-select" style="width:auto; padding:5px 10px; font-size:13px;" onchange="renderCinema()">
-              <option value="#ffd838" selected>Criterion 暖金 (#FFD838)</option>
-              <option value="#ffffff">纯净亮白 (#FFFFFF)</option>
-            </select>
           </div>
 
-          <label class="btn" style="padding:5px 12px; font-size:12.5px;">
-            📁 上传本地 .ttf/.otf 字体文件
-            <input type="file" accept=".ttf,.otf,.woff,.woff2" style="display:none;" onchange="uploadCustomFont(event)" />
-          </label>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:12px; font-weight:700; color:var(--text-muted);">一键预设:</label>
+            <select id="assPresetSelect" class="clean-select" style="width:auto; padding:5px 9px; font-size:12.5px;" onchange="applyAssPreset(this.value)">
+              <option value="criterion" selected>🎞️ Criterion 暖金双语 (黄中 + 银白英)</option>
+              <option value="netflix">⚪ Netflix 纯白极简 (亮白中 + 浅灰英)</option>
+              <option value="arthouse">📽️ 欧洲艺术院线 (文楷米金 + 古典衬线英)</option>
+              <option value="box">⬛ 半透明黑底框 (高对比度黑底盒)</option>
+              <option value="cyber">🔵 蓝金高反差 (琥珀金中 + 冰蓝英)</option>
+            </select>
+
+            <select id="assOrderSelect" class="clean-select" style="width:auto; padding:5px 9px; font-size:12.5px;" onchange="renderCinema()">
+              <option value="zh_top" selected>↕️ 译文在上 / 原文在下</option>
+              <option value="en_top">↕️ 原文在上 / 译文在下</option>
+              <option value="zh_only">🀄 仅显示译文</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2-Column Dual-Language Font & Color Controls (Target + Source/English) -->
+        <div class="setup-grid" style="margin-bottom:12px;">
+          <!-- Target / Chinese Subtitle Style -->
+          <div class="setup-box" style="padding:10px 12px;">
+            <div class="setup-label">
+              <span>🀄 主字幕样式 (译文 / Target)</span>
+              <label style="color:var(--primary); cursor:pointer; text-decoration:underline; font-size:11.5px;">
+                📁 上传中文字体 (.ttf/.otf)
+                <input type="file" accept=".ttf,.otf,.woff,.woff2" style="display:none;" onchange="uploadCustomFont(event, 'zh')" />
+              </label>
+            </div>
+            <div style="display:grid; grid-template-columns: 1.4fr 1.1fr 0.7fr; gap:6px; align-items:center;">
+              <select id="assFontSelect" class="clean-select" style="font-size:12.5px; padding:5px 8px;" onchange="renderCinema()">
+                <option value="'Noto Serif SC', 'Songti SC', 'STSong', serif" data-ass-name="Source Han Serif SC" selected>思源宋体 (院线衬线)</option>
+                <option value="'LXGW WenKai', 'Kaiti SC', 'STKaiti', serif" data-ass-name="LXGW WenKai">霞鹜文楷 (文艺手写楷书)</option>
+                <option value="'Noto Sans SC', 'Source Han Sans SC', sans-serif" data-ass-name="Source Han Sans SC">思源黑体 (厚重现代黑体)</option>
+                <option value="'PingFang SC', 'Microsoft YaHei', sans-serif" data-ass-name="PingFang SC">苹方 / 微软雅黑 (清晰无衬线)</option>
+                <option value="'Kaiti SC', 'STKaiti', 'KaiTi', serif" data-ass-name="Kaiti SC">经典楷体 (传统典雅)</option>
+                <option value="'FangSong', 'STFangsong', serif" data-ass-name="FangSong">传统仿宋 (复古译制片)</option>
+                <option value="'STXingkai', 'Xingkai SC', cursive" data-ass-name="STXingkai">华文行楷 (书法艺术感)</option>
+                <option value="'Yuanti SC', 'STYuanti', sans-serif" data-ass-name="Yuanti SC">圆体 (柔和圆润字幕)</option>
+                <option value="ui-monospace, 'JetBrains Mono', monospace" data-ass-name="JetBrains Mono">等宽打字机 (纪录片电报感)</option>
+              </select>
+
+              <div style="display:flex; gap:4px; align-items:center;">
+                <select id="assColorSelect" class="clean-select" style="font-size:12.5px; padding:5px 6px; flex:1;" onchange="onAssColorDropdownChange('zh')">
+                  <option value="#ffd838" selected>暖金 (#FFD838)</option>
+                  <option value="#ffffff">纯白 (#FFFFFF)</option>
+                  <option value="#f59e0b">琥珀 (#F59E0B)</option>
+                  <option value="#fef08a">柔米黄 (#FEF08A)</option>
+                  <option value="#bae6fd">冰川蓝 (#BAE6FD)</option>
+                  <option value="#a7f3d0">薄荷绿 (#A7F3D0)</option>
+                  <option value="#fbcfe8">樱花粉 (#FBCFE8)</option>
+                </select>
+                <input type="color" id="assZhColorPicker" value="#ffd838" style="width:28px; height:28px; border:1px solid var(--border); border-radius:5px; padding:1px; cursor:pointer; background:var(--bg-card);" oninput="onAssColorPickerInput('zh')" title="自由选择主字幕颜色" />
+              </div>
+
+              <select id="assZhSizeSelect" class="clean-select" style="font-size:12px; padding:5px 6px;" onchange="renderCinema()" title="主字幕字号">
+                <option value="20" data-ass-size="48">字号: 小 (48)</option>
+                <option value="23" data-ass-size="58" selected>字号: 标准 (58)</option>
+                <option value="27" data-ass-size="68">字号: 大 (68)</option>
+                <option value="31" data-ass-size="76">字号: 特大 (76)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Source / English Subtitle Style -->
+          <div class="setup-box" style="padding:10px 12px;">
+            <div class="setup-label">
+              <span>🔤 副字幕样式 (英文/原文 / Source)</span>
+              <label style="color:var(--primary); cursor:pointer; text-decoration:underline; font-size:11.5px;">
+                📁 上传英文字体 (.ttf/.otf)
+                <input type="file" accept=".ttf,.otf,.woff,.woff2" style="display:none;" onchange="uploadCustomFont(event, 'en')" />
+              </label>
+            </div>
+            <div style="display:grid; grid-template-columns: 1.4fr 1.1fr 0.7fr; gap:6px; align-items:center;">
+              <select id="assEnFontSelect" class="clean-select" style="font-size:12.5px; padding:5px 8px;" onchange="renderCinema()">
+                <option value="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" data-ass-name="Inter" selected>Inter / SF Pro (现代流媒体)</option>
+                <option value="'Helvetica Neue', Helvetica, Arial, sans-serif" data-ass-name="Helvetica Neue">Helvetica / Arial (好莱坞经典)</option>
+                <option value="Georgia, 'Times New Roman', serif" data-ass-name="Georgia">Georgia / Times (经典文学衬线)</option>
+                <option value="Garamond, Baskerville, 'Baskerville Old Face', serif" data-ass-name="Garamond">Garamond / Baskerville (欧洲文艺衬线)</option>
+                <option value="Futura, 'Avenir Next', Avenir, sans-serif" data-ass-name="Futura">Futura / Avenir (几何电影感)</option>
+                <option value="'Trebuchet MS', 'Gill Sans', sans-serif" data-ass-name="Trebuchet MS">Trebuchet / Gill Sans (人文无衬线)</option>
+                <option value="Palatino, 'Palatino Linotype', serif" data-ass-name="Palatino">Palatino (史诗优雅衬线)</option>
+                <option value="Verdana, Geneva, sans-serif" data-ass-name="Verdana">Verdana (高可读宽体)</option>
+                <option value="'Courier New', 'JetBrains Mono', monospace" data-ass-name="Courier New">Courier / Mono (打字机等宽)</option>
+                <option value="Impact, 'Arial Narrow', sans-serif" data-ass-name="Arial Narrow">Narrow / 紧凑窄体</option>
+              </select>
+
+              <div style="display:flex; gap:4px; align-items:center;">
+                <select id="assEnColorSelect" class="clean-select" style="font-size:12.5px; padding:5px 6px; flex:1;" onchange="onAssColorDropdownChange('en')">
+                  <option value="#e2e8f0" selected>柔和银白 (#E2E8F0)</option>
+                  <option value="#ffffff">纯净亮白 (#FFFFFF)</option>
+                  <option value="#fde68a">浅香槟金 (#FDE68A)</option>
+                  <option value="#bae6fd">冷调冰蓝 (#BAE6FD)</option>
+                  <option value="#fcd34d">暖调琥珀 (#FCD34D)</option>
+                  <option value="#94a3b8">低调雾灰 (#94A3B8)</option>
+                  <option value="#a7f3d0">柔和薄荷 (#A7F3D0)</option>
+                </select>
+                <input type="color" id="assEnColorPicker" value="#e2e8f0" style="width:28px; height:28px; border:1px solid var(--border); border-radius:5px; padding:1px; cursor:pointer; background:var(--bg-card);" oninput="onAssColorPickerInput('en')" title="自由选择英文/原文副字幕颜色" />
+              </div>
+
+              <select id="assEnSizeSelect" class="clean-select" style="font-size:12px; padding:5px 6px;" onchange="renderCinema()" title="副字幕字号">
+                <option value="12" data-ass-size="28">字号: 小 (28)</option>
+                <option value="14" data-ass-size="34" selected>字号: 标准 (34)</option>
+                <option value="16" data-ass-size="40">字号: 中大 (40)</option>
+                <option value="18" data-ass-size="46">字号: 大 (46)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="cinema-box">
@@ -764,9 +856,9 @@
             <span id="cinemaSceneLabel">SCENE · 院线双语 .ASS 渲染预览</span>
             <span id="cinemaTimecode">00:06.150 --&gt; 00:10.500</span>
           </div>
-          <div style="text-align:center; margin-top:auto; padding-top:30px;">
-            <div id="cinemaZhText" style="font-size:23px; font-weight:700; color:#ffd838; text-shadow:0 2px 6px #000, 0 0 3px #000; font-family:'Noto Serif SC', serif;"></div>
-            <div id="cinemaDeText" style="font-size:13.5px; color:rgba(255,255,255,0.88); margin-top:6px; text-shadow:0 1px 4px #000;"></div>
+          <div id="cinemaSubStack" style="text-align:center; margin-top:auto; padding-top:30px; display:flex; flex-direction:column; align-items:center; gap:5px;">
+            <div id="cinemaZhText" style="font-size:23px; font-weight:700; color:#ffd838; text-shadow:0 2px 6px #000, 0 0 3px #000; font-family:'Noto Serif SC', serif; padding:2px 8px; border-radius:4px;"></div>
+            <div id="cinemaDeText" style="font-size:14px; color:#e2e8f0; text-shadow:0 1px 4px #000; font-family:'Inter', sans-serif; padding:1px 6px; border-radius:4px;"></div>
           </div>
         </div>
       </div>
@@ -1588,6 +1680,83 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       renderCinema();
     }
 
+    function onAssColorDropdownChange(which) {
+      if (which === "zh") {
+        const val = document.getElementById("assColorSelect").value;
+        document.getElementById("assZhColorPicker").value = val;
+      } else {
+        const val = document.getElementById("assEnColorSelect").value;
+        document.getElementById("assEnColorPicker").value = val;
+      }
+      renderCinema();
+    }
+
+    function onAssColorPickerInput(which) {
+      if (which === "zh") {
+        const val = document.getElementById("assZhColorPicker").value;
+        const sel = document.getElementById("assColorSelect");
+        let customOpt = sel.querySelector("option[data-custom='1']");
+        if (!customOpt) {
+          customOpt = document.createElement("option");
+          customOpt.dataset.custom = "1";
+          sel.prepend(customOpt);
+        }
+        customOpt.value = val;
+        customOpt.textContent = `自定义 (${val.toUpperCase()})`;
+        sel.value = val;
+      } else {
+        const val = document.getElementById("assEnColorPicker").value;
+        const sel = document.getElementById("assEnColorSelect");
+        let customOpt = sel.querySelector("option[data-custom='1']");
+        if (!customOpt) {
+          customOpt = document.createElement("option");
+          customOpt.dataset.custom = "1";
+          sel.prepend(customOpt);
+        }
+        customOpt.value = val;
+        customOpt.textContent = `自定义 (${val.toUpperCase()})`;
+        sel.value = val;
+      }
+      renderCinema();
+    }
+
+    function applyAssPreset(preset) {
+      const zhFont = document.getElementById("assFontSelect");
+      const zhColor = document.getElementById("assColorSelect");
+      const zhPicker = document.getElementById("assZhColorPicker");
+      const enFont = document.getElementById("assEnFontSelect");
+      const enColor = document.getElementById("assEnColorSelect");
+      const enPicker = document.getElementById("assEnColorPicker");
+
+      if (preset === "criterion") {
+        zhFont.selectedIndex = 0; // Source Han Serif SC
+        zhColor.value = "#ffd838"; zhPicker.value = "#ffd838";
+        enFont.selectedIndex = 0; // Inter
+        enColor.value = "#e2e8f0"; enPicker.value = "#e2e8f0";
+      } else if (preset === "netflix") {
+        zhFont.selectedIndex = 2; // Source Han Sans SC
+        zhColor.value = "#ffffff"; zhPicker.value = "#ffffff";
+        enFont.selectedIndex = 1; // Helvetica Neue
+        enColor.value = "#e2e8f0"; enPicker.value = "#e2e8f0";
+      } else if (preset === "arthouse") {
+        zhFont.selectedIndex = 1; // LXGW WenKai
+        zhColor.value = "#fef08a"; zhPicker.value = "#fef08a";
+        enFont.selectedIndex = 3; // Garamond
+        enColor.value = "#ffffff"; enPicker.value = "#ffffff";
+      } else if (preset === "box") {
+        zhFont.selectedIndex = 3; // PingFang SC
+        zhColor.value = "#ffd838"; zhPicker.value = "#ffd838";
+        enFont.selectedIndex = 0; // Inter
+        enColor.value = "#ffffff"; enPicker.value = "#ffffff";
+      } else if (preset === "cyber") {
+        zhFont.selectedIndex = 2; // Source Han Sans SC
+        zhColor.value = "#f59e0b"; zhPicker.value = "#f59e0b";
+        enFont.selectedIndex = 4; // Futura
+        enColor.value = "#bae6fd"; enPicker.value = "#bae6fd";
+      }
+      renderCinema();
+    }
+
     function renderCinema() {
       const provKey = document.getElementById("providerSelect").value;
       const modelA = document.getElementById("modelSelect").value;
@@ -1604,15 +1773,38 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       }
 
       const activeRow = rows[cinemaCueIdx] || rows[0];
-      const font = document.getElementById("assFontSelect").value;
-      const color = document.getElementById("assColorSelect").value;
+      const zhFont = document.getElementById("assFontSelect").value;
+      const zhColor = document.getElementById("assZhColorPicker")?.value || document.getElementById("assColorSelect").value;
+      const zhSizePx = document.getElementById("assZhSizeSelect")?.value || "23";
+
+      const enFont = document.getElementById("assEnFontSelect")?.value || "'Inter', sans-serif";
+      const enColor = document.getElementById("assEnColorPicker")?.value || document.getElementById("assEnColorSelect")?.value || "#e2e8f0";
+      const enSizePx = document.getElementById("assEnSizeSelect")?.value || "14";
+
+      const preset = document.getElementById("assPresetSelect")?.value || "criterion";
+      const order = document.getElementById("assOrderSelect")?.value || "zh_top";
 
       const zhEl = document.getElementById("cinemaZhText");
-      zhEl.style.fontFamily = font;
-      zhEl.style.color = color;
+      const deEl = document.getElementById("cinemaDeText");
+      const stackEl = document.getElementById("cinemaSubStack");
+
+      zhEl.style.fontFamily = zhFont;
+      zhEl.style.color = zhColor;
+      zhEl.style.fontSize = `${zhSizePx}px`;
+      zhEl.style.background = preset === "box" ? "rgba(0, 0, 0, 0.72)" : "transparent";
       zhEl.textContent = getTranslationForModel(activeRow, provKey, modelA);
 
-      document.getElementById("cinemaDeText").textContent = activeRow.de;
+      deEl.style.fontFamily = enFont;
+      deEl.style.color = enColor;
+      deEl.style.fontSize = `${enSizePx}px`;
+      deEl.style.background = preset === "box" ? "rgba(0, 0, 0, 0.72)" : "transparent";
+      deEl.textContent = activeRow.de;
+      deEl.classList.toggle("hidden", order === "zh_only");
+
+      if (stackEl) {
+        stackEl.style.flexDirection = order === "en_top" ? "column-reverse" : "column";
+      }
+
       document.getElementById("cinemaTimecode").textContent = `${activeRow.tcShort} (${activeRow.badge})`;
       document.getElementById("cinemaSceneLabel").textContent = `SCENE · ${activeFileName} (${cinemaCueIdx + 1}/${rows.length})`;
     }
@@ -1782,9 +1974,19 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
 
       if (kind === "ass") {
         filename = `${stem}.zh-bi.ass`;
-        const fontSel = document.getElementById("assFontSelect");
-        const assFontName = fontSel.selectedOptions?.[0]?.dataset?.assName || "Source Han Serif SC";
-        const assPrimaryColor = hexToAssBgr(document.getElementById("assColorSelect").value);
+        const zhFontSel = document.getElementById("assFontSelect");
+        const assZhFontName = zhFontSel.selectedOptions?.[0]?.dataset?.assName || "Source Han Serif SC";
+        const assZhColor = hexToAssBgr(document.getElementById("assZhColorPicker")?.value || document.getElementById("assColorSelect").value);
+        const assZhSize = document.getElementById("assZhSizeSelect")?.selectedOptions?.[0]?.dataset?.assSize || "58";
+
+        const enFontSel = document.getElementById("assEnFontSelect");
+        const assEnFontName = enFontSel?.selectedOptions?.[0]?.dataset?.assName || "Inter";
+        const assEnColor = hexToAssBgr(document.getElementById("assEnColorPicker")?.value || document.getElementById("assEnColorSelect")?.value || "#e2e8f0");
+        const assEnSize = document.getElementById("assEnSizeSelect")?.selectedOptions?.[0]?.dataset?.assSize || "34";
+
+        const preset = document.getElementById("assPresetSelect")?.value || "criterion";
+        const borderStyle = preset === "box" ? "3" : "1";
+        const order = document.getElementById("assOrderSelect")?.value || "zh_top";
 
         content = `[Script Info]
 Title: SubLLM Bilingual Cinema Subtitle (${modelA})
@@ -1794,8 +1996,8 @@ PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: MainZH,${assFontName},58,${assPrimaryColor},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,1.5,2,40,40,42,1
-Style: SubSRC,Inter,34,&H00E0E0E0,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.8,1.0,2,40,40,42,1
+Style: MainZH,${assZhFontName},${assZhSize},${assZhColor},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,${borderStyle},2.5,1.5,2,40,40,42,1
+Style: SubSRC,${assEnFontName},${assEnSize},${assEnColor},&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,${borderStyle},1.8,1.0,2,40,40,42,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -1803,6 +2005,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           const s = formatAssTc(r.startMs);
           const e = formatAssTc(r.endMs);
           const zh = getTranslationForModel(r, provKey, modelA);
+          if (order === "zh_only") {
+            return `Dialogue: 0,${s},${e},MainZH,,0,0,0,,${zh}`;
+          }
+          if (order === "en_top") {
+            return `Dialogue: 0,${s},${e},SubSRC,,0,0,0,,${r.de}\\N{\\rMainZH}${zh}`;
+          }
           return `Dialogue: 0,${s},${e},MainZH,,0,0,0,,${zh}\\N{\\rSubSRC}${r.de}`;
         }).join("\n");
       } else if (kind === "srt_bi") {
@@ -1830,7 +2038,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       URL.revokeObjectURL(url);
     }
 
-    async function uploadCustomFont(e) {
+    async function uploadCustomFont(e, which = "zh") {
       const file = e.target.files?.[0];
       if (!file) return;
       const buf = await file.arrayBuffer();
@@ -1838,11 +2046,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       const face = new FontFace(customName, buf);
       await face.load();
       document.fonts.add(face);
-      const select = document.getElementById("assFontSelect");
+      const select = document.getElementById(which === "en" ? "assEnFontSelect" : "assFontSelect");
       const opt = document.createElement("option");
       opt.value = `'${customName}', sans-serif`;
       opt.dataset.assName = customName;
-      opt.textContent = `📁 已加载字体: ${file.name}`;
+      opt.textContent = `📁 已加载: ${file.name}`;
       opt.selected = true;
       select.prepend(opt);
       renderCinema();
