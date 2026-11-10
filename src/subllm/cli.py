@@ -278,5 +278,86 @@ def translate_command(
     )
 
 
+@app.command("serve")
+def serve_command(
+    port: int = typer.Option(8765, "--port", "-p", help="Local port for the SubLLM Web Studio"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address"),
+) -> None:
+    """Launch the local SubLLM Web Studio server (serves index.html + proxies LLM calls to bypass browser CORS)."""
+    import json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    repo_root = Path(__file__).resolve().parents[2]
+    index_path = repo_root / "index.html"
+
+    class StudioHandler(BaseHTTPRequestHandler):
+        def log_message(self, fmt: str, *args: object) -> None:
+            return
+
+        def _send_json(self, status: int, payload: dict) -> None:
+            raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def do_OPTIONS(self) -> None:
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.end_headers()
+
+        def do_GET(self) -> None:
+            if self.path == "/api/health":
+                self._send_json(200, {"ok": True, "mode": "python-backend"})
+                return
+            if index_path.exists():
+                html_bytes = index_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(html_bytes)))
+                self.end_headers()
+                self.wfile.write(html_bytes)
+            else:
+                self._send_json(404, {"error": "index.html not found"})
+
+        def do_POST(self) -> None:
+            if self.path != "/api/translate":
+                self._send_json(404, {"error": "unknown endpoint"})
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            provider = str(body.get("provider", "deepseek"))
+            model = str(body.get("model", "deepseek-chat"))
+            api_key = str(body.get("apiKey", ""))
+            endpoint = str(body.get("endpoint", ""))
+            prompt = str(body.get("prompt", ""))
+            try:
+                client = UnifiedLLMClient(
+                    provider=provider,
+                    model=model,
+                    api_keys=[api_key] if api_key else settings.active_api_keys,
+                    api_endpoint=endpoint,
+                )
+                text = asyncio.run(client.complete(prompt, temperature=0.2))
+                self._send_json(200, {"ok": True, "text": text})
+            except Exception as exc:
+                self._send_json(500, {"ok": False, "error": str(exc)})
+
+    console.print(
+        Panel.fit(
+            f"🌐 [bold green]SubLLM Local Studio running at:[/bold green] http://{host}:{port}\n"
+            "All 8 LLM providers (DeepSeek, OpenAI, Gemini, Claude, OpenRouter, Mistral, Groq, Ollama) "
+            "are proxied via Python UnifiedLLMClient with zero browser CORS limits.",
+            title="🎬 subllm serve",
+        )
+    )
+    server = HTTPServer((host, port), StudioHandler)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
     app()
