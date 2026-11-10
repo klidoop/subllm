@@ -1809,7 +1809,8 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       document.getElementById("cinemaSceneLabel").textContent = `SCENE · ${activeFileName} (${cinemaCueIdx + 1}/${rows.length})`;
     }
 
-    // Translate rows via real LLM API (supports Gemini native, Anthropic native, and OpenAI-compatible endpoints)
+    // Translate rows via real LLM API (supports direct browser CORS for OpenRouter/Gemini/Anthropic/Groq,
+    // plus automatic local Python proxy via `uv run subllm serve` at http://127.0.0.1:8765/api/translate for CORS-restricted APIs)
     async function translateCueBatchViaApi(rowsBatch, provKey, modelId, apiKey, endpoint) {
       const sourceLang = getEffectiveSourceLang();
       const targetLang = getEffectiveTargetLang();
@@ -1819,59 +1820,80 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       let resp;
       let text = "";
 
-      if (provKey === "gemini") {
-        const cleanModel = (modelId || "gemini-2.5-flash").replace(/^models\//, "");
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        resp = await fetch(geminiUrl, {
+      try {
+        if (provKey === "gemini") {
+          const cleanModel = (modelId || "gemini-2.5-flash").replace(/^models\//, "");
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          resp = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: sysPrompt }] },
+              contents: [{ role: "user", parts: [{ text: promptLines }] }],
+              generationConfig: { temperature: 0.2 }
+            })
+          });
+          if (!resp.ok) throw new Error(`Gemini HTTP ${resp.status}`);
+          const data = await resp.json();
+          text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else if (provKey === "anthropic") {
+          resp = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+              "anthropic-dangerous-direct-browser-access": "true"
+            },
+            body: JSON.stringify({
+              model: modelId,
+              max_tokens: 4096,
+              temperature: 0.2,
+              system: sysPrompt,
+              messages: [{ role: "user", content: promptLines }]
+            })
+          });
+          if (!resp.ok) throw new Error(`Anthropic HTTP ${resp.status}`);
+          const data = await resp.json();
+          text = data.content?.[0]?.text || "";
+        } else {
+          const headers = { "Content-Type": "application/json" };
+          if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+          resp = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              model: modelId,
+              temperature: 0.2,
+              messages: [
+                { role: "system", content: sysPrompt },
+                { role: "user", content: promptLines }
+              ]
+            })
+          });
+          if (!resp.ok) throw new Error(`API HTTP ${resp.status}`);
+          const data = await resp.json();
+          text = data.choices?.[0]?.message?.content || "";
+        }
+      } catch (directErr) {
+        // Fallback to local `uv run subllm serve` proxy if browser CORS blocks direct request
+        const proxyResp = await fetch("http://127.0.0.1:8765/api/translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: sysPrompt }] },
-            contents: [{ role: "user", parts: [{ text: promptLines }] }],
-            generationConfig: { temperature: 0.2 }
-          })
-        });
-        if (!resp.ok) throw new Error(`Gemini HTTP ${resp.status}`);
-        const data = await resp.json();
-        text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      } else if (provKey === "anthropic") {
-        resp = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true"
-          },
-          body: JSON.stringify({
+            provider: provKey,
             model: modelId,
-            max_tokens: 4096,
-            temperature: 0.2,
-            system: sysPrompt,
-            messages: [{ role: "user", content: promptLines }]
+            apiKey,
+            endpoint,
+            prompt: `${sysPrompt}\n\n${promptLines}`
           })
-        });
-        if (!resp.ok) throw new Error(`Anthropic HTTP ${resp.status}`);
-        const data = await resp.json();
-        text = data.content?.[0]?.text || "";
-      } else {
-        const headers = { "Content-Type": "application/json" };
-        if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-        resp = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: modelId,
-            temperature: 0.2,
-            messages: [
-              { role: "system", content: sysPrompt },
-              { role: "user", content: promptLines }
-            ]
-          })
-        });
-        if (!resp.ok) throw new Error(`API HTTP ${resp.status}`);
-        const data = await resp.json();
-        text = data.choices?.[0]?.message?.content || "";
+        }).catch(() => null);
+        if (proxyResp && proxyResp.ok) {
+          const proxyData = await proxyResp.json();
+          text = proxyData.text || "";
+        } else {
+          throw directErr;
+        }
       }
 
       const outLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => /^\[\d+\]/.test(l) || l.length > 0);
