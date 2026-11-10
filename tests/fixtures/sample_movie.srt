@@ -1,0 +1,32 @@
+1
+00:00:01,200 --> 00:00:03,000
+{\an8}<i>BERLIN - WINTER 1989</i>
+
+2
+00:00:04,500 --> 00:00:06,100
+Viktor, listen to me carefully.
+
+3
+00:00:06,250 --> 00:00:07,800
+The reason why the Nightfall Protocol
+
+4
+00:00:07,900 --> 00:00:10,200
+was never activated by Director Vance
+
+5
+00:00:10,300 --> 00:00:12,400
+is because the cipher key was compromised in Vienna.
+
+6
+00:00:17,500 --> 00:00:18,600
+You're lying to me, Elena!
+
+7
+00:00:18,750 --> 00:00:20,100
+If Stasi headquarters finds out we lost the microfiche, we're both dead before sunrise!
+
+8
+00:00:20,300 --> 00:00:22,500
+<i>[Radio static crackles]</i>
+♪ <i>Wind of Change playing faintly</i> ♪

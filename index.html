@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="editorial">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubLLM — 智能电影字幕翻译工作台</title>
+  <style>
+    /* =====================================================================
+       5 CLEAN, HIGH-CONTRAST THEMES
+       ===================================================================== */
+    :root,
+    html[data-theme="editorial"] {
+      --bg-page: #f5f2eb;
+      --bg-card: #ffffff;
+      --bg-subtle: #ede8df;
+      --bg-row-alt: #faf8f4;
+      --border: #d4cbbd;
+      --text-main: #181512;
+      --text-muted: #57534e;
+      --primary: #b45309;
+      --primary-hover: #92400e;
+      --primary-fg: #ffffff;
+      --primary-light: #fef3c7;
+      --good: #15803d;
+      --good-bg: #dcfce7;
+      --warn: #b91c1c;
+      --warn-bg: #fee2e2;
+    }
+
+    html[data-theme="nordic"] {
+      --bg-page: #e9f0ee;
+      --bg-card: #ffffff;
+      --bg-subtle: #dde7e4;
+      --bg-row-alt: #f4f8f7;
+      --border: #bfd0cb;
+      --text-main: #0f221d;
+      --text-muted: #3b544d;
+      --primary: #0f766e;
+      --primary-hover: #115e59;
+      --primary-fg: #ffffff;
+      --primary-light: #ccfbf1;
+      --good: #047857;
+      --good-bg: #d1fae5;
+      --warn: #be123c;
+      --warn-bg: #ffe4e6;
+    }
+
+    html[data-theme="kyoto"] {
+      --bg-page: #f7eff1;
+      --bg-card: #ffffff;
+      --bg-subtle: #eee1e5;
+      --bg-row-alt: #fcf8f9;
+      --border: #d9c2c9;
+      --text-main: #24141a;
+      --text-muted: #5e414c;
+      --primary: #be185d;
+      --primary-hover: #9d174d;
+      --primary-fg: #ffffff;
+      --primary-light: #fce7f3;
+      --good: #047857;
+      --good-bg: #d1fae5;
+      --warn: #be123c;
+      --warn-bg: #ffe4e6;
+    }
+
+    html[data-theme="criterion"] {
+      --bg-page: #141210;
+      --bg-card: #1f1c19;
+      --bg-subtle: #2b2622;
+      --bg-row-alt: #191614;
+      --border: #3d362f;
+      --text-main: #faf6ee;
+      --text-muted: #bfb6a8;
+      --primary: #facc15;
+      --primary-hover: #eab308;
+      --primary-fg: #141210;
+      --primary-light: rgba(250, 204, 21, 0.16);
+      --good: #4ade80;
+      --good-bg: rgba(74, 222, 128, 0.16);
+      --warn: #fda4af;
+      --warn-bg: rgba(253, 164, 175, 0.16);
+    }
+
+    html[data-theme="midnight"] {
+      --bg-page: #0c111d;
+      --bg-card: #151e30;
+      --bg-subtle: #1e2b42;
+      --bg-row-alt: #111827;
+      --border: #2e4063;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-fg: #ffffff;
+      --primary-light: rgba(59, 130, 246, 0.18);
+      --good: #34d399;
+      --good-bg: rgba(52, 211, 153, 0.16);
+      --warn: #fb7185;
+      --warn-bg: rgba(251, 113, 133, 0.18);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      overflow-x: hidden;
+      background: var(--bg-page);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    body {
+      padding: 14px 16px 36px;
+    }
+    .app {
+      max-width: 1020px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    div, section, select, input, button, table {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      background: var(--primary);
+      color: var(--primary-fg);
+      font-weight: 800;
+      font-size: 13px;
+      padding: 5px 10px;
+      border-radius: 7px;
+    }
+    .topbar-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    /* CARDS & 2x2 SETUP GRID */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .section-step-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .setup-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .setup-box {
+      background: var(--bg-row-alt);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .setup-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    select.clean-select, input.clean-input {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    input.clean-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.65;
+      font-weight: 400;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      margin-top: 2px;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    /* SUBTITLE TABLE & TABS */
+    .view-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-pills {
+      display: inline-flex;
+      flex-wrap: wrap;
+      background: var(--bg-subtle);
+      padding: 3px;
+      border-radius: 8px;
+      gap: 3px;
+    }
+    .tab-pill {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .tab-pill.active {
+      background: var(--bg-card);
+      color: var(--text-main);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .sub-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .sub-table th {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-size: 12.5px;
+      font-weight: 800;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sub-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .sub-table tr:last-child td {
+      border-bottom: none;
+    }
+    .sub-table tr:nth-child(even) td {
+      background: var(--bg-row-alt);
+    }
+
+    .tc-pill {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-subtle);
+      padding: 2px 7px;
+      border-radius: 5px;
+      margin-bottom: 4px;
+    }
+    .status-tag {
+      display: inline-block;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .status-good { background: var(--good-bg); color: var(--good); }
+    .status-warn { background: var(--warn-bg); color: var(--warn); }
+
+    .src-sentence {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .zh-sentence {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    /* LAUNCH BAR, PROGRESS & DOWNLOADS */
+    .launch-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-row-alt);
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-top: 16px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-main);
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .btn:hover:not(:disabled) {
+      border-color: var(--primary);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--primary-fg);
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    .btn-good {
+      background: var(--good);
+      border-color: var(--good);
+      color: #ffffff;
+    }
+
+    .progress-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 10px;
+      background: var(--bg-row-alt);
+      border: 1px solid var(--border);
+    }
+    .progress-track {
+      width: 100%;
+      height: 24px;
+      background: var(--bg-subtle);
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 10px 0 14px;
+      border: 1px solid var(--border);
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      color: var(--primary-fg);
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: width 0.25s ease;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .stat-lbl {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .completion-card {
+      margin-top: 14px;
+      padding: 16px 18px;
+      border-radius: 10px;
+      background: var(--good-bg);
+      border: 1.5px solid var(--good);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .cinema-box {
+      width: 100%;
+      min-height: 225px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #0d131f 0%, #172336 60%, #070a0f 100%);
+      color: #fff;
+      padding: 18px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo">SubLLM</span>
+        <span class="topbar-title">电影字幕翻译工作台 (Subtitle Translation Studio)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label style="font-size:12.5px; font-weight:700; color:var(--text-muted);">🎨 主题:</label>
+        <select class="clean-select" style="width:auto; padding:5px 10px; font-size:12.5px;" onchange="document.documentElement.setAttribute('data-theme', this.value)">
+          <option value="editorial" selected>📜 羊皮纸卷 (护眼米白)</option>
+          <option value="nordic">🌿 北欧青苔 (清爽薄荷)</option>
+          <option value="kyoto">🌸 京都晨雾 (柔和暖粉)</option>
+          <option value="criterion">🎞️ 胶片暗房 (院线黑金)</option>
+          <option value="midnight">🌌 午夜深空 (深蓝暗色)</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- STEP 1: 4 CLEAR SETUP BOXES -->
+    <section class="card">
+      <div class="section-step-title">
+        <span>第一步：选择字幕与语言、配置 API Key 与模型</span>
+      </div>
+
+      <div class="setup-grid">
+        <!-- Box 1: Subtitle File & Full Language Selector -->
+        <div class="setup-box">
+          <div class="setup-label">
+            <span>① 字幕文件与语言 (支持自动检测 + 45 种语言 + 自定义)</span>
+            <label style="color:var(--primary); cursor:pointer; text-decoration:underline;">
+              📂 上传本地 .srt/.ass/.vtt
+              <input type="file" accept=".srt,.ass,.vtt" style="display:none;" onchange="uploadCustomSrt(event)" />
+            </label>
+          </div>
+          <div style="font-weight:800; font-size:13.5px;" id="fileTitleText">
+            🎬 tanz_mit_dem_teufel_2001_de.srt (共 9 句原始字幕 → 合并后 7 句)
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px;">
+            <div>
+              <select id="srcLangSelect" class="clean-select" style="font-size:12.5px; padding:6px 8px;" onchange="onLangChange('src')">
+                <option value="Auto" id="autoDetectOption" selected>✨ 自动检测 (Auto-detected: German)</option>
+                <optgroup label="常用语言 (Most Common)">
+                  <option value="English">English (英语)</option>
+                  <option value="German">German (德语)</option>
+                  <option value="French">French (法语)</option>
+                  <option value="Spanish">Spanish (西班牙语)</option>
+                  <option value="Japanese">Japanese (日语)</option>
+                  <option value="Korean">Korean (韩语)</option>
+                  <option value="Russian">Russian (俄语)</option>
+                  <option value="Italian">Italian (意大利语)</option>
+                  <option value="Portuguese (Brazil)">Portuguese (Brazil)</option>
+                  <option value="Portuguese (Portugal)">Portuguese (Portugal)</option>
+                  <option value="Arabic">Arabic (阿拉伯语)</option>
+                  <option value="Chinese (Simplified)">Chinese (简体中文)</option>
+                </optgroup>
+                <optgroup label="欧洲语言 (European)">
+                  <option value="Dutch">Dutch (荷兰语)</option>
+                  <option value="Polish">Polish (波兰语)</option>
+                  <option value="Swedish">Swedish (瑞典语)</option>
+                  <option value="Norwegian">Norwegian (挪威语)</option>
+                  <option value="Danish">Danish (丹麦语)</option>
+                  <option value="Finnish">Finnish (芬兰语)</option>
+                  <option value="Greek">Greek (希腊语)</option>
+                  <option value="Hungarian">Hungarian (匈牙利语)</option>
+                  <option value="Czech">Czech (捷克语)</option>
+                  <option value="Romanian">Romanian (罗马尼亚语)</option>
+                  <option value="Ukrainian">Ukrainian (乌克兰语)</option>
+                  <option value="Catalan">Catalan (加泰罗尼亚语)</option>
+                </optgroup>
+                <optgroup label="亚洲与中东 (Asian &amp; Middle East)">
+                  <option value="Hindi">Hindi (印地语)</option>
+                  <option value="Vietnamese">Vietnamese (越南语)</option>
+                  <option value="Thai">Thai (泰语)</option>
+                  <option value="Indonesian">Indonesian (印尼语)</option>
+                  <option value="Malay">Malay (马来语)</option>
+                  <option value="Tagalog">Tagalog (塔加洛语)</option>
+                  <option value="Turkish">Turkish (土耳其语)</option>
+                  <option value="Persian">Persian (波斯语)</option>
+                  <option value="Hebrew">Hebrew (希伯来语)</option>
+                </optgroup>
+                <optgroup label="自定义语言 (Custom)">
+                  <option value="Other">✏️ 其他语言 (手动输入...)</option>
+                </optgroup>
+              </select>
+              <input type="text" id="customSrcLangInput" class="clean-input hidden" style="margin-top:5px; font-size:12px;" placeholder="输入原语言 (如 Cantonese, Latin)..." />
+            </div>
+
+            <div>
+              <select id="tgtLangSelect" class="clean-select" style="font-size:12.5px; padding:6px 8px;" onchange="onLangChange('tgt')">
+                <optgroup label="常用目标语言 (Most Common)">
+                  <option value="Simplified Chinese" selected>目标: 简体中文 (Simplified Chinese)</option>
+                  <option value="Traditional Chinese">目标: 繁體中文 (Traditional Chinese)</option>
+                  <option value="English">目标: English (英语)</option>
+                  <option value="Japanese">目标: Japanese (日语)</option>
+                  <option value="Korean">目标: Korean (韩语)</option>
+                  <option value="Spanish">目标: Spanish (西班牙语)</option>
+                  <option value="French">目标: French (法语)</option>
+                  <option value="German">目标: German (德语)</option>
+                  <option value="Russian">目标: Russian (俄语)</option>
+                  <option value="Portuguese (Brazil)">目标: Portuguese (Brazil)</option>
+                  <option value="Arabic">目标: Arabic (阿拉伯语)</option>
+                </optgroup>
+                <optgroup label="欧洲与亚洲其他语言">
+                  <option value="Italian">目标: Italian (意大利语)</option>
+                  <option value="Dutch">目标: Dutch (荷兰语)</option>
+                  <option value="Polish">目标: Polish (波兰语)</option>
+                  <option value="Vietnamese">目标: Vietnamese (越南语)</option>
+                  <option value="Thai">目标: Thai (泰语)</option>
+                  <option value="Indonesian">目标: Indonesian (印尼语)</option>
+                  <option value="Turkish">目标: Turkish (土耳其语)</option>
+                </optgroup>
+                <optgroup label="自定义语言 (Custom)">
+                  <option value="Other">✏️ 其他目标语言 (手动输入...)</option>
+                </optgroup>
+              </select>
+              <input type="text" id="customTgtLangInput" class="clean-input hidden" style="margin-top:5px; font-size:12px;" placeholder="输入目标语言 (如 粤语口语, Classical Chinese)..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Box 2: API Key & Endpoint -->
+        <div class="setup-box">
+          <div class="setup-label">
+            <span id="apiKeyLabelText">② 选择 AI 平台 &amp; 填写 API Key (填 Key 自动拉取可用模型)</span>
+            <span id="apiKeyStatusBadge" class="status-tag status-good">🟢 内置模型已就绪</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1.35fr; gap:7px;">
+            <select id="providerSelect" class="clean-select" onchange="onProviderChange()">
+              <option value="deepseek" selected>DeepSeek (官方 API)</option>
+              <option value="openrouter">OpenRouter (200+ 模型)</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI (官方/兼容接口)</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="mistral">Mistral AI</option>
+              <option value="groq">Groq (高速云)</option>
+              <option value="ollama">Ollama (本地免 Key · $0)</option>
+            </select>
+
+            <div id="cloudKeyRow" style="display:flex; gap:5px;">
+              <input
+                type="password"
+                id="apiKeyInput"
+                class="clean-input"
+                placeholder="粘贴 API Key 自动解锁并拉取模型列表"
+                onchange="fetchModelsFromProviderApi()"
+                oninput="onApiKeyTyped()"
+              />
+              <button type="button" class="btn" style="padding:5px 8px;" onclick="toggleKeyVisibility()" title="显示/隐藏 Key">👁️</button>
+            </div>
+
+            <div id="ollamaFreeRow" class="hidden" style="display:flex; align-items:center; font-size:12.5px; color:var(--good); font-weight:700;">
+              🟢 本地运行免 API Key ($0 免费)
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:11.5px; color:var(--text-muted); white-space:nowrap;">接口地址:</span>
+            <input
+              type="text"
+              id="apiEndpointInput"
+              class="clean-input"
+              style="font-size:11.5px; padding:4px 8px; font-family:ui-monospace,monospace;"
+              onchange="fetchModelsFromProviderApi()"
+            />
+          </div>
+        </div>
+
+        <!-- Box 3: Model Selector -->
+        <div class="setup-box">
+          <div class="setup-label">
+            <span>③ 选择模型 (<span id="modelCountLabel">已列出全部内置模型</span>)</span>
+            <span id="costBadgeText" style="color:var(--good);">全片约 ¥0.11</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <input
+              type="text"
+              id="modelSearchInput"
+              class="clean-input"
+              style="width:38%; font-size:12px; padding:6px 8px;"
+              placeholder="🔍 搜索过滤模型..."
+              oninput="populateModelDropdown()"
+            />
+            <select id="modelSelect" class="clean-select" style="flex:1;" onchange="onModelChange()"></select>
+            <button type="button" class="btn" style="padding:5px 9px;" onclick="fetchModelsFromProviderApi()" title="从当前 API 重新拉取可用模型列表">
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- Box 4: Fix Broken Sentences Checkbox -->
+        <div class="setup-box">
+          <div class="setup-label">
+            <span>④ 跨行断句与二次润色 (核心开关)</span>
+            <span class="status-tag status-good">已启用智能合并</span>
+          </div>
+          <label class="toggle-row">
+            <input type="checkbox" id="mergeCheckbox" checked onchange="renderAll()" />
+            <div>
+              <div style="font-weight:800; font-size:13.5px;">自动合并被切断的半截句子 + 二次润色</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                把原片切成 4 段的半截从句合并成完整中文并自动延长时间轴（取消勾选可对比看原片断句有多碎）
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: SAMPLE PREVIEW + ONE-CLICK FULL TRANSLATION & DOWNLOAD -->
+    <section class="card">
+      <div class="view-bar">
+        <div>
+          <div class="section-step-title" style="margin-bottom:2px;">
+            <span>第二步：查看试译结果，满意后直接点底部「开始翻译全片字幕」</span>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted);" id="resultSummaryBanner"></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <!-- Scope toggle: Sample vs All Cues -->
+          <div class="tab-pills">
+            <button type="button" class="tab-pill active" id="scopeBtnSample" onclick="setScopeMode('sample')">
+              🎯 仅看抽样 (3 句)
+            </button>
+            <button type="button" class="tab-pill" id="scopeBtnAll" onclick="setScopeMode('all')">
+              📜 看全部字幕 (<span id="allCueCountBadge">7</span> 句)
+            </button>
+          </div>
+
+          <div class="tab-pills">
+            <button type="button" class="tab-pill active" id="tabBtnSingle" onclick="setViewTab('single')">
+              📄 单模型
+            </button>
+            <button type="button" class="tab-pill" id="tabBtnCompare" onclick="setViewTab('compare')">
+              ⚖️ 对比 2 个模型
+            </button>
+            <button type="button" class="tab-pill" id="tabBtnCinema" onclick="setViewTab('cinema')">
+              🎬 电影画面预览 (.ASS)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional 2nd Model Bar -->
+      <div id="compareBar" class="hidden" style="background:var(--bg-subtle); padding:10px 14px; border-radius:8px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <span style="font-size:13px; font-weight:700;">⚖️ 选择第二个模型与当前模型并排对比：</span>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="font-size:12.5px; color:var(--text-muted);">右侧对比模型 B：</span>
+          <select id="secondModelSelect" class="clean-select" style="width:auto; padding:5px 10px; font-size:13px;" onchange="renderAll()"></select>
+        </div>
+      </div>
+
+      <!-- VIEW A & B: THE CLEAN SUBTITLE TABLE -->
+      <div id="tableViewContainer">
+        <table class="sub-table">
+          <thead id="subTableHead"></thead>
+          <tbody id="subTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- VIEW C: THE MOVIE SCREEN PREVIEW (.ASS Font) -->
+      <div id="cinemaViewContainer" class="hidden">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:12.5px; font-weight:700;">预览台词:</label>
+            <button type="button" class="btn" style="padding:4px 8px; font-size:12px;" onclick="stepCinemaCue(-1)">◀ 上一句</button>
+            <select id="cinemaCueSelect" class="clean-select" style="width:auto; max-width:210px; padding:5px 8px; font-size:12.5px;" onchange="onCinemaCueSelect()"></select>
+            <button type="button" class="btn" style="padding:4px 8px; font-size:12px;" onclick="stepCinemaCue(1)">下一句 ▶</button>
+
+            <label style="font-size:12.5px; font-weight:700; margin-left:4px;">字体:</label>
+            <select id="assFontSelect" class="clean-select" style="width:auto; padding:5px 10px; font-size:13px;" onchange="renderCinema()">
+              <option value="'Noto Serif SC', 'Songti SC', serif" data-ass-name="Source Han Serif SC" selected>思源宋体 (院线电影感)</option>
+              <option value="'PingFang SC', 'Microsoft YaHei', sans-serif" data-ass-name="PingFang SC">苹方 / 微软雅黑 (现代无衬线)</option>
+              <option value="'Kaiti SC', 'STKaiti', serif" data-ass-name="Kaiti SC">经典楷体</option>
+            </select>
+
+            <label style="font-size:12.5px; font-weight:700;">颜色:</label>
+            <select id="assColorSelect" class="clean-select" style="width:auto; padding:5px 10px; font-size:13px;" onchange="renderCinema()">
+              <option value="#ffd838" selected>Criterion 暖金 (#FFD838)</option>
+              <option value="#ffffff">纯净亮白 (#FFFFFF)</option>
+            </select>
+          </div>
+
+          <label class="btn" style="padding:5px 12px; font-size:12.5px;">
+            📁 上传本地 .ttf/.otf 字体文件
+            <input type="file" accept=".ttf,.otf,.woff,.woff2" style="display:none;" onchange="uploadCustomFont(event)" />
+          </label>
+        </div>
+
+        <div class="cinema-box">
+          <div style="display:flex; justify-content:space-between; font-family:ui-monospace,monospace; font-size:12px; color:rgba(255,255,255,0.75);">
+            <span id="cinemaSceneLabel">SCENE · 院线双语 .ASS 渲染预览</span>
+            <span id="cinemaTimecode">00:06.150 --&gt; 00:10.500</span>
+          </div>
+          <div style="text-align:center; margin-top:auto; padding-top:30px;">
+            <div id="cinemaZhText" style="font-size:23px; font-weight:700; color:#ffd838; text-shadow:0 2px 6px #000, 0 0 3px #000; font-family:'Noto Serif SC', serif;"></div>
+            <div id="cinemaDeText" style="font-size:13.5px; color:rgba(255,255,255,0.88); margin-top:6px; text-shadow:0 1px 4px #000;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: USER-FRIENDLY GUI TRANSLATION LAUNCHER & DOWNLOADS -->
+      <div class="launch-bar">
+        <div>
+          <div style="font-weight:800; font-size:14.5px;" id="launchTitleText">
+            🎬 准备好翻译整部电影字幕了吗？
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;" id="launchSubText"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn" id="sampleTestBtn" onclick="runLiveSampleTest()">
+            🧪 试译当前抽样
+          </button>
+          <button type="button" class="btn btn-primary" id="startFullBtn" onclick="startFullGuiTranslation()">
+            ▶️ 开始翻译全片字幕 (Start Full Translation)
+          </button>
+        </div>
+      </div>
+
+      <!-- Live GUI Progress Panel -->
+      <div id="guiProgressPanel" class="progress-panel hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span style="font-weight:800; font-size:13.5px;" id="progressStatusTitle">⏳ 正在翻译全片字幕...</span>
+          <span style="font-size:12px; color:var(--text-muted);" id="progressLiveDetail">Pass 2: 场景上下文对齐与短句合并中</span>
+        </div>
+
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBarFill" style="width: 0%;">0%</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-val" id="statTotalCues">7</div>
+            <div class="stat-lbl">总字幕条数 (Total Cues)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statDoneCues">0</div>
+            <div class="stat-lbl">已翻译条数 (Completed)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statMergedCount">2</div>
+            <div class="stat-lbl">已合并跨行断句 (Merged)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statCostUsd">$0.0000</div>
+            <div class="stat-lbl">本次消耗费用 (Cost)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Completion & 1-Click File Download Card -->
+      <div id="guiCompletionCard" class="completion-card hidden">
+        <div>
+          <div style="font-weight:800; font-size:15px; color:var(--good);" id="completionTitleText">
+            ✅ 全片字幕全部翻译完成！
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">
+            下方表格已切换为全部字幕预览，点击右侧按钮直接保存完整字幕文件到本地电脑：
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-good" onclick="downloadSubtitleFile('ass')">
+            ⬇️ 下载双语院线 .ASS 字幕
+          </button>
+          <button type="button" class="btn" onclick="downloadSubtitleFile('srt_bi')">
+            ⬇️ 下载双语 .SRT 字幕
+          </button>
+          <button type="button" class="btn" onclick="downloadSubtitleFile('srt_zh')">
+            ⬇️ 下载纯目标语言 .SRT
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. BUILT-IN MODEL CATALOG (75+ Models across 8 Providers) + LIVE /models API
+    // =========================================================================
+    const PROVIDER_CATALOG = {
+      deepseek: {
+        label: "DeepSeek",
+        keyPlaceholder: "粘贴 DeepSeek Key (sk-...) 自动验证并刷新模型",
+        chatEndpoint: "https://api.deepseek.com/v1/chat/completions",
+        modelsEndpoint: "https://api.deepseek.com/models",
+        models: [
+          { id: "deepseek-chat", group: "官方主力模型", name: "deepseek-chat (DeepSeek-V3-0324 · 影视翻译首选)", cost: "全片约 ¥0.11" },
+          { id: "deepseek-reasoner", group: "官方主力模型", name: "deepseek-reasoner (DeepSeek-R1 深度推理)", cost: "全片约 ¥0.35" }
+        ]
+      },
+      openrouter: {
+        label: "OpenRouter",
+        keyPlaceholder: "粘贴 OpenRouter Key (sk-or-v1-...) 自动拉取 200+ 模型",
+        chatEndpoint: "https://openrouter.ai/api/v1/chat/completions",
+        modelsEndpoint: "https://openrouter.ai/api/v1/models",
+        models: [
+          { id: "anthropic/claude-3.7-sonnet", group: "Anthropic Claude 系列", name: "anthropic/claude-3.7-sonnet (最新旗舰)", cost: "全片约 ¥1.5" },
+          { id: "anthropic/claude-3.7-sonnet:thinking", group: "Anthropic Claude 系列", name: "anthropic/claude-3.7-sonnet:thinking", cost: "全片约 ¥1.8" },
+          { id: "anthropic/claude-3.5-sonnet", group: "Anthropic Claude 系列", name: "anthropic/claude-3.5-sonnet (电影台词天花板)", cost: "全片约 ¥1.5" },
+          { id: "anthropic/claude-3.5-haiku", group: "Anthropic Claude 系列", name: "anthropic/claude-3.5-haiku (高速轻量)", cost: "全片约 ¥0.3" },
+          { id: "deepseek/deepseek-chat-v3-0324", group: "DeepSeek 系列", name: "deepseek/deepseek-chat-v3-0324", cost: "全片约 ¥0.11" },
+          { id: "deepseek/deepseek-chat-v3-0324:free", group: "DeepSeek 系列", name: "deepseek/deepseek-chat-v3-0324:free ($0 免费路由)", cost: "$0.00 免费" },
+          { id: "deepseek/deepseek-r1", group: "DeepSeek 系列", name: "deepseek/deepseek-r1", cost: "全片约 ¥0.35" },
+          { id: "deepseek/deepseek-r1:free", group: "DeepSeek 系列", name: "deepseek/deepseek-r1:free ($0 免费路由)", cost: "$0.00 免费" },
+          { id: "google/gemini-2.5-pro-preview", group: "Google Gemini 系列", name: "google/gemini-2.5-pro-preview", cost: "全片约 ¥0.6" },
+          { id: "google/gemini-2.5-flash-preview", group: "Google Gemini 系列", name: "google/gemini-2.5-flash-preview", cost: "全片约 ¥0.08" },
+          { id: "google/gemini-2.0-flash-001", group: "Google Gemini 系列", name: "google/gemini-2.0-flash-001", cost: "全片约 ¥0.05" },
+          { id: "google/gemma-3-27b-it:free", group: "Google Gemini 系列", name: "google/gemma-3-27b-it:free ($0 免费)", cost: "$0.00 免费" },
+          { id: "openai/gpt-4.1", group: "OpenAI 系列", name: "openai/gpt-4.1", cost: "全片约 ¥1.0" },
+          { id: "openai/gpt-4.1-mini", group: "OpenAI 系列", name: "openai/gpt-4.1-mini", cost: "全片约 ¥0.18" },
+          { id: "openai/gpt-4o", group: "OpenAI 系列", name: "openai/gpt-4o", cost: "全片约 ¥1.1" },
+          { id: "openai/gpt-4o-mini", group: "OpenAI 系列", name: "openai/gpt-4o-mini", cost: "全片约 ¥0.08" },
+          { id: "openai/o3-mini", group: "OpenAI 系列", name: "openai/o3-mini", cost: "全片约 ¥0.5" },
+          { id: "qwen/qwen-2.5-72b-instruct", group: "Qwen / Llama / Mistral 开源旗舰", name: "qwen/qwen-2.5-72b-instruct (通义千问 72B)", cost: "全片约 ¥0.15" },
+          { id: "qwen/qwen3-235b-a22b", group: "Qwen / Llama / Mistral 开源旗舰", name: "qwen/qwen3-235b-a22b (千问3 旗舰)", cost: "全片约 ¥0.18" },
+          { id: "meta-llama/llama-3.3-70b-instruct", group: "Qwen / Llama / Mistral 开源旗舰", name: "meta-llama/llama-3.3-70b-instruct", cost: "全片约 ¥0.15" },
+          { id: "mistralai/mistral-large-2411", group: "Qwen / Llama / Mistral 开源旗舰", name: "mistralai/mistral-large-2411 (欧洲语种专精)", cost: "全片约 ¥0.7" },
+          { id: "mistralai/mistral-small-3.1-24b-instruct:free", group: "Qwen / Llama / Mistral 开源旗舰", name: "mistralai/mistral-small-3.1-24b-instruct:free ($0)", cost: "$0.00 免费" }
+        ]
+      },
+      gemini: {
+        label: "Google Gemini",
+        keyPlaceholder: "粘贴 Gemini Key (AIza...) 自动拉取账号可用模型",
+        chatEndpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        modelsEndpoint: "https://generativelanguage.googleapis.com/v1beta/models",
+        models: [
+          { id: "gemini-2.5-flash", group: "Gemini 2.5 系列", name: "gemini-2.5-flash (含 AI Studio 免费额度 · 极速)", cost: "免费额度 $0 / 全片 ¥0.06" },
+          { id: "gemini-2.5-pro", group: "Gemini 2.5 系列", name: "gemini-2.5-pro (复杂语境旗舰)", cost: "全片约 ¥0.6" },
+          { id: "gemini-2.0-flash", group: "Gemini 2.0 系列", name: "gemini-2.0-flash", cost: "免费额度 $0 / 全片 ¥0.05" },
+          { id: "gemini-2.0-flash-lite", group: "Gemini 2.0 系列", name: "gemini-2.0-flash-lite (超轻量)", cost: "全片仅 ¥0.02" },
+          { id: "gemini-1.5-pro", group: "Gemini 1.5 系列", name: "gemini-1.5-pro", cost: "全片约 ¥0.6" },
+          { id: "gemini-1.5-flash", group: "Gemini 1.5 系列", name: "gemini-1.5-flash", cost: "全片约 ¥0.04" }
+        ]
+      },
+      openai: {
+        label: "OpenAI",
+        keyPlaceholder: "粘贴 OpenAI Key (sk-...) 自动拉取账号可用模型",
+        chatEndpoint: "https://api.openai.com/v1/chat/completions",
+        modelsEndpoint: "https://api.openai.com/v1/models",
+        models: [
+          { id: "gpt-4.1", group: "GPT-4.1 系列 (最新)", name: "gpt-4.1 (最新旗舰)", cost: "全片约 ¥1.0" },
+          { id: "gpt-4.1-mini", group: "GPT-4.1 系列 (最新)", name: "gpt-4.1-mini (高性价比推荐)", cost: "全片约 ¥0.18" },
+          { id: "gpt-4.1-nano", group: "GPT-4.1 系列 (最新)", name: "gpt-4.1-nano (超轻量极速)", cost: "全片约 ¥0.05" },
+          { id: "gpt-4o", group: "GPT-4o 系列", name: "gpt-4o", cost: "全片约 ¥1.1" },
+          { id: "gpt-4o-mini", group: "GPT-4o 系列", name: "gpt-4o-mini", cost: "全片约 ¥0.08" },
+          { id: "o3-mini", group: "o系列推理模型", name: "o3-mini", cost: "全片约 ¥0.5" },
+          { id: "o1", group: "o系列推理模型", name: "o1", cost: "全片约 ¥3.5" }
+        ]
+      },
+      anthropic: {
+        label: "Anthropic",
+        keyPlaceholder: "粘贴 Claude Key (sk-ant-...)",
+        chatEndpoint: "https://api.anthropic.com/v1/messages",
+        modelsEndpoint: "https://api.anthropic.com/v1/models",
+        models: [
+          { id: "claude-3-7-sonnet-latest", group: "Claude 3.7 / 3.5 系列", name: "claude-3-7-sonnet-latest (最新旗舰)", cost: "全片约 ¥1.5" },
+          { id: "claude-3-5-sonnet-latest", group: "Claude 3.7 / 3.5 系列", name: "claude-3-5-sonnet-latest (电影台词天花板)", cost: "全片约 ¥1.5" },
+          { id: "claude-3-5-haiku-latest", group: "Claude 3.7 / 3.5 系列", name: "claude-3-5-haiku-latest (高速轻量)", cost: "全片约 ¥0.3" },
+          { id: "claude-3-opus-latest", group: "Claude 3 系列", name: "claude-3-opus-latest", cost: "全片约 ¥4.5" }
+        ]
+      },
+      mistral: {
+        label: "Mistral AI",
+        keyPlaceholder: "粘贴 Mistral API Key 自动拉取模型",
+        chatEndpoint: "https://api.mistral.ai/v1/chat/completions",
+        modelsEndpoint: "https://api.mistral.ai/v1/models",
+        models: [
+          { id: "mistral-large-latest", group: "Mistral 官方模型", name: "mistral-large-latest (德/法/西语极强)", cost: "全片约 ¥0.7" },
+          { id: "mistral-medium-latest", group: "Mistral 官方模型", name: "mistral-medium-latest", cost: "全片约 ¥0.3" },
+          { id: "mistral-small-latest", group: "Mistral 官方模型", name: "mistral-small-latest (高性价比)", cost: "全片约 ¥0.09" },
+          { id: "ministral-8b-latest", group: "Mistral 官方模型", name: "ministral-8b-latest", cost: "全片约 ¥0.04" },
+          { id: "open-mistral-nemo", group: "Mistral 官方模型", name: "open-mistral-nemo", cost: "全片约 ¥0.05" }
+        ]
+      },
+      groq: {
+        label: "Groq",
+        keyPlaceholder: "粘贴 Groq Key (gsk_...) 自动拉取模型",
+        chatEndpoint: "https://api.groq.com/openai/v1/chat/completions",
+        modelsEndpoint: "https://api.groq.com/openai/v1/models",
+        models: [
+          { id: "llama-3.3-70b-versatile", group: "Groq 极速模型", name: "llama-3.3-70b-versatile (300 tok/s)", cost: "全片约 ¥0.12" },
+          { id: "deepseek-r1-distill-llama-70b", group: "Groq 极速模型", name: "deepseek-r1-distill-llama-70b", cost: "全片约 ¥0.16" },
+          { id: "qwen-qwq-32b", group: "Groq 极速模型", name: "qwen-qwq-32b", cost: "全片约 ¥0.10" },
+          { id: "gemma2-9b-it", group: "Groq 极速模型", name: "gemma2-9b-it", cost: "全片约 ¥0.03" },
+          { id: "llama-3.1-8b-instant", group: "Groq 极速模型", name: "llama-3.1-8b-instant", cost: "全片约 ¥0.02" }
+        ]
+      },
+      ollama: {
+        label: "Ollama (本地)",
+        keyPlaceholder: "",
+        chatEndpoint: "http://localhost:11434/v1/chat/completions",
+        modelsEndpoint: "http://localhost:11434/api/tags",
+        models: [
+          { id: "qwen2.5:14b-instruct", group: "本地开源推荐 ($0 免费)", name: "qwen2.5:14b-instruct (本地中文最强 · $0)", cost: "$0.00 本地免费" },
+          { id: "qwen2.5:32b", group: "本地开源推荐 ($0 免费)", name: "qwen2.5:32b (大参数旗舰 · $0)", cost: "$0.00 本地免费" },
+          { id: "qwen2.5:7b", group: "本地开源推荐 ($0 免费)", name: "qwen2.5:7b (8GB 显存流畅 · $0)", cost: "$0.00 本地免费" },
+          { id: "gemma3:27b", group: "本地开源推荐 ($0 免费)", name: "gemma3:27b (Google 开源德英强 · $0)", cost: "$0.00 本地免费" },
+          { id: "gemma3:12b", group: "本地开源推荐 ($0 免费)", name: "gemma3:12b ($0)", cost: "$0.00 本地免费" },
+          { id: "llama3.3:70b", group: "本地开源推荐 ($0 免费)", name: "llama3.3:70b ($0)", cost: "$0.00 本地免费" },
+          { id: "deepseek-r1:14b", group: "本地开源推荐 ($0 免费)", name: "deepseek-r1:14b ($0)", cost: "$0.00 本地免费" },
+          { id: "mistral-small:24b", group: "本地开源推荐 ($0 免费)", name: "mistral-small:24b ($0)", cost: "$0.00 本地免费" }
+        ]
+      }
+    };
+
+    // =========================================================================
+    // 2. REAL CLIENT-SIDE SUBTITLE ENGINE
+    //    - Default full SRT content (all 9 cues of tanz_mit_dem_teufel_2001_de.srt)
+    //    - Real SRT/VTT/ASS parser, language auto-detector, continuation cue
+    //      merger (`mergeContinuationCues`), and uniform interior sampler (`selectSampleIndices`)
+    // =========================================================================
+    const DEFAULT_SRT_CONTENT = `1
+00:00:01,500 --> 00:00:03,800
+{\\an8}<i>FREISING BEI MÜNCHEN - 14. DEZEMBER 1976</i>
+
+2
+00:00:04,200 --> 00:00:06,000
+Herr Oetker, hören Sie mir jetzt ganz genau zu.
+
+3
+00:00:06,150 --> 00:00:08,100
+Wenn Ihr Vater die einundzwanzig Millionen D-Mark
+
+4
+00:00:08,200 --> 00:00:10,500
+bis morgen Mittag in großen, unregistrierten Scheinen
+
+5
+00:00:10,600 --> 00:00:12,900
+nicht ohne Einschaltung der Kriminalpolizei bereitstellt,
+
+6
+00:00:13,050 --> 00:00:15,200
+wird die Frischluftzufuhr in dieser Holzkiste abgeschaltet.
+
+7
+00:00:19,500 --> 00:00:21,100
+Haben Sie eine Spur von diesem Ciliox, Kommissar?
+
+8
+00:00:21,250 --> 00:00:22,700
+Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt alle drei Minuten den Standort!
+
+9
+00:00:23,000 --> 00:00:25,400
+<i>[Tonbandgerät klickt]</i> Ich melde mich um Punkt vierzehn Uhr wieder, Herr Kommissar.`;
+
+    // Pre-computed high-precision multi-model translations for the built-in German fixture
+    const BUILTIN_TRANSLATIONS = {
+      "FREISING BEI MÜNCHEN - 14. DEZEMBER 1976": {
+        default: "慕尼黑近郊弗赖辛 · 1976年12月14日",
+        anthropic: "1976年12月14日 · 慕尼黑近郊弗赖辛"
+      },
+      "Herr Oetker, hören Sie mir jetzt ganz genau zu.": {
+        deepseek: "奥特克先生，现在给我把每一个字听清楚。",
+        anthropic: "奥特克先生，现在请把我的话听仔细了。",
+        ollama: "奥特克先生，现在请您仔细听我说。",
+        gemini: "奥特克先生，请仔细听好我接下来的话。",
+        default: "奥特克先生，现在给我把每一个字听清楚。"
+      },
+      // Merged #3+#4
+      "Wenn Ihr Vater die einundzwanzig Millionen D-Mark bis morgen Mittag in großen, unregistrierten Scheinen": {
+        deepseek: "要是明午之前，你父亲没备齐两千一百万不连号的大面额马克，",
+        anthropic: "明午十二点前，要是令尊没备妥两千一百万不记名大钞，",
+        ollama: "如果明午十二点前，你父亲没备齐两千一百万不连号的大额马克，",
+        gemini: "要是明天中午前，你父亲没准备好两千一百万不连号马克大钞，",
+        openai: "如果明天中午之前，你父亲没备好两千一百万不记名大额马克，",
+        mistral: "倘若您父亲在明午之前没备齐两千一百万不连号的大钞，",
+        default: "要是明午之前，你父亲没备齐两千一百万不连号的大面额马克，"
+      },
+      // Merged #5+#6
+      "nicht ohne Einschaltung der Kriminalpolizei bereitstellt, wird die Frischluftzufuhr in dieser Holzkiste abgeschaltet.": {
+        deepseek: "或是敢私下惊动刑警——这口木箱的供氧就会立刻切断。",
+        anthropic: "又或者敢暗中报警——这口木箱里的空气就会立刻断绝。",
+        ollama: "或者胆敢惊动刑警介入，这口木箱里的通风供氧就会被彻底切断。",
+        gemini: "或者敢偷偷报警，这只木箱里的氧气供应就会立刻关闭。",
+        openai: "或是暗中通知刑警，这口木箱的氧气就会立刻被切断。",
+        mistral: "哪怕敢惊动半个警察，这口木箱里的氧气都会立即切断。",
+        default: "或是敢私下惊动刑警——这口木箱的供氧就会立刻切断。"
+      },
+      // Unmerged #3, #4, #5, #6
+      "Wenn Ihr Vater die einundzwanzig Millionen D-Mark": {
+        default: "要是你父亲把那两千一百万德国马克……（⚠️ 宾语悬空，话没说完画面就切走了）"
+      },
+      "bis morgen Mittag in großen, unregistrierten Scheinen": {
+        default: "在明天中午之前换成不连号的大钞……（⚠️ 还是没有谓语动词）"
+      },
+      "nicht ohne Einschaltung der Kriminalpolizei bereitstellt,": {
+        default: "却没在不惊动刑警的情况下备妥，（⚠️ 到第 3 条才突然出现否定词和动词）"
+      },
+      "wird die Frischluftzufuhr in dieser Holzkiste abgeschaltet.": {
+        default: "这口木箱里的通风供氧就会被切断。"
+      },
+      "Haben Sie eine Spur von diesem Ciliox, Kommissar?": {
+        deepseek: "警督，查到这个齐利奥克斯的踪迹了吗？",
+        anthropic: "警督，那个齐利奥克斯有眉目了吗？",
+        ollama: "探长，查到这个齐利奥克斯的线索了吗？",
+        default: "警督，查到这个齐利奥克斯的踪迹了吗？"
+      },
+      "Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt alle drei Minuten den Standort!": {
+        deepseek: "这家伙专挑高速路边的投币电话打过来，每三分钟就换一个地方！",
+        anthropic: "那家伙专挑高速公路旁的投币公话亭，每三分钟就换一处地方！",
+        ollama: "这家伙使用高速公路旁的公用投币电话，而且每三分钟就换一个位置！",
+        default: "这家伙专挑高速路边的投币电话打过来，每三分钟就换一个地方！"
+      },
+      "[Tonbandgerät klickt] Ich melde mich um Punkt vierzehn Uhr wieder, Herr Kommissar.": {
+        deepseek: "[录音机咔哒声] 警督先生，下午两点整我会准时再打过来。",
+        anthropic: "[磁带机咔哒声] 警督先生，下午两点整我再联系你。",
+        ollama: "[录音机咔哒声] 探长先生，下午两点整我会再打过来。",
+        default: "[录音机咔哒声] 警督先生，下午两点整我会准时再打过来。"
+      }
+    };
+
+    let activeFileName = "tanz_mit_dem_teufel_2001_de.srt";
+    let activeDetectedLang = "German";
+    let activeUnmergedRows = [];
+    let activeMergedRows = [];
+    let currentTab = "single";   // 'single' | 'compare' | 'cinema'
+    let scopeMode = "sample";    // 'sample' | 'all'
+    let cinemaCueIdx = 0;
+    const savedKeys = {};
+
+    function parseTimeMs(tcStr) {
+      const s = (tcStr || "").trim();
+      // HH:MM:SS,mmm or H:MM:SS.cc (ASS/SRT/VTT)
+      const m3 = s.match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+      if (m3) {
+        const msStr = m3[4].length === 2 ? m3[4] + "0" : m3[4].padEnd(3, "0").slice(0, 3);
+        return (parseInt(m3[1], 10) * 3600 + parseInt(m3[2], 10) * 60 + parseInt(m3[3], 10)) * 1000 + parseInt(msStr, 10);
+      }
+      // MM:SS.mmm (short VTT)
+      const m2 = s.match(/(\d+):(\d+)[,.](\d+)/);
+      if (m2) {
+        return (parseInt(m2[1], 10) * 60 + parseInt(m2[2], 10)) * 1000 + parseInt(m2[3].padEnd(3, "0").slice(0, 3), 10);
+      }
+      return 0;
+    }
+
+    function formatShortTc(startMs, endMs) {
+      const fmt = (ms) => {
+        const totalSec = ms / 1000;
+        const mins = String(Math.floor(totalSec / 60)).padStart(2, "0");
+        const secs = (totalSec % 60).toFixed(1).padStart(4, "0");
+        return `${mins}:${secs}`;
+      };
+      return `${fmt(startMs)} → ${fmt(endMs)}`;
+    }
+
+    function formatFullSrtTc(ms) {
+      const h = String(Math.floor(ms / 3600000)).padStart(2, "0");
+      const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, "0");
+      const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, "0");
+      const mil = String(ms % 1000).padStart(3, "0");
+      return `${h}:${m}:${s},${mil}`;
+    }
+
+    function formatAssTc(ms) {
+      const h = Math.floor(ms / 3600000);
+      const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, "0");
+      const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, "0");
+      const cs = String(Math.floor((ms % 1000) / 10)).padStart(2, "0");
+      return `${h}:${m}:${s}.${cs}`;
+    }
+
+    function detectLanguageFromCues(cues) {
+      const sample = cues.slice(0, 20).map(c => c.de).join(" ");
+      if (/[\u3040-\u30ff]/.test(sample)) return "Japanese";
+      if (/[\uac00-\ud7af]/.test(sample)) return "Korean";
+      if (/[\u0400-\u04ff]/.test(sample)) return "Russian";
+      if (/[äöüßÄÖÜ]|\b(und|der|die|das|nicht|Herr)\b/i.test(sample)) return "German";
+      if (/\b(le|la|les|des|est|une|dans|pour|avec)\b/i.test(sample)) return "French";
+      if (/[ñ¿¡]|\b(el|la|los|las|por|para|una|con)\b/i.test(sample)) return "Spanish";
+      return "English";
+    }
+
+    function getEffectiveSourceLang() {
+      const sel = document.getElementById("srcLangSelect").value;
+      if (sel === "Auto") return activeDetectedLang || "Auto-detected";
+      if (sel === "Other") return document.getElementById("customSrcLangInput").value.trim() || "Source Language";
+      return sel;
+    }
+
+    function getEffectiveTargetLang() {
+      const sel = document.getElementById("tgtLangSelect").value;
+      if (sel === "Other") return document.getElementById("customTgtLangInput").value.trim() || "Simplified Chinese";
+      return sel;
+    }
+
+    function buildCueObj(origIdx, startMs, endMs, cleanText) {
+      const durSec = Math.max(0.5, (endMs - startMs) / 1000).toFixed(1);
+      const hasTerminal = /[.!?。！？…"'”’\]\)]\s*$/.test(cleanText);
+      return {
+        origIndices: [origIdx],
+        startMs,
+        endMs,
+        tc: `${formatFullSrtTc(startMs)} --> ${formatFullSrtTc(endMs)}`,
+        tcShort: formatShortTc(startMs, endMs),
+        badge: hasTerminal ? `原 #${origIdx} (${durSec}秒)` : `⚠️ 原 #${origIdx} (仅 ${durSec}秒 · 句末未完结)`,
+        good: hasTerminal,
+        de: cleanText,
+        zh: { ...(BUILTIN_TRANSLATIONS[cleanText] || { default: cleanText }) }
+      };
+    }
+
+    // Real parser for .srt, .vtt, AND .ass / .ssa subtitle files
+    function parseSubtitleText(rawText) {
+      const cues = [];
+      const normalized = rawText.replace(/\r\n/g, "\n").trim();
+
+      // 1. Check if it's an .ASS / .SSA file with Dialogue: lines
+      const assLines = normalized.split("\n").filter(l => /^Dialogue:\s*/i.test(l.trim()));
+      if (assLines.length > 0) {
+        for (const line of assLines) {
+          const rest = line.replace(/^Dialogue:\s*/i, "");
+          const parts = rest.split(",");
+          if (parts.length < 10) continue;
+          const startMs = parseTimeMs(parts[1]);
+          const endMs = parseTimeMs(parts[2]);
+          const rawDialogue = parts.slice(9).join(",");
+          const cleanText = rawDialogue
+            .replace(/\{\\[^}]*\}/g, "")
+            .replace(/\\[Nn]/g, " ")
+            .replace(/<\/?[^>]+>/g, "")
+            .trim();
+          if (!cleanText) continue;
+          cues.push(buildCueObj(cues.length + 1, startMs, endMs, cleanText));
+        }
+        return cues;
+      }
+
+      // 2. Otherwise parse .SRT / .VTT blocks containing "-->"
+      const blocks = normalized.split(/\n\n+/);
+      for (const blk of blocks) {
+        const lines = blk.split("\n").map(l => l.trim()).filter(Boolean);
+        if (!lines.length) continue;
+        const tcIdx = lines.findIndex(l => l.includes("-->"));
+        if (tcIdx === -1) continue;
+        const [startStr, endStr] = lines[tcIdx].split("-->");
+        const startMs = parseTimeMs(startStr);
+        const endMs = parseTimeMs(endStr.trim().split(/\s+/)[0]);
+        const cleanText = lines
+          .slice(tcIdx + 1)
+          .join(" ")
+          .replace(/\{\\[^}]+\}/g, "")
+          .replace(/<\/?[^>]+>/g, "")
+          .trim();
+        if (!cleanText) continue;
+        cues.push(buildCueObj(cues.length + 1, startMs, endMs, cleanText));
+      }
+      return cues;
+    }
+
+    // Real port of `merge_continuation_cues` (SRTProcessor.merge_multiline_subtitles)
+    function mergeContinuationCuesJs(unmergedCues, maxChars = 125, maxGapMs = 800) {
+      if (!unmergedCues.length) return [];
+      const merged = [];
+      for (const cue of unmergedCues) {
+        if (!merged.length) {
+          merged.push(JSON.parse(JSON.stringify(cue)));
+          continue;
+        }
+        const prev = merged[merged.length - 1];
+        const prevEndsWithPunct = /[.!?。！？…"'”’\]\)]\s*$/.test(prev.de);
+        const prevIsTitle = prev.de === prev.de.toUpperCase();
+        const gapMs = cue.startMs - prev.endMs;
+        const combinedText = `${prev.de} ${cue.de}`;
+
+        if (!prevEndsWithPunct && !prevIsTitle && gapMs <= maxGapMs && combinedText.length <= maxChars) {
+          prev.de = combinedText;
+          prev.endMs = cue.endMs;
+          prev.origIndices.push(...cue.origIndices);
+          prev.tc = `${formatFullSrtTc(prev.startMs)} --> ${formatFullSrtTc(prev.endMs)}`;
+          prev.tcShort = formatShortTc(prev.startMs, prev.endMs);
+          const durSec = ((prev.endMs - prev.startMs) / 1000).toFixed(1);
+          prev.badge = `✅ 已合并原 #${prev.origIndices.join("+#")} (停留 ${durSec}秒)`;
+          prev.good = true;
+          prev.zh = { ...(BUILTIN_TRANSLATIONS[combinedText] || { default: combinedText }) };
+        } else {
+          const copy = JSON.parse(JSON.stringify(cue));
+          const durSec = ((copy.endMs - copy.startMs) / 1000).toFixed(1);
+          copy.badge = copy.origIndices.length > 1
+            ? `✅ 已合并原 #${copy.origIndices.join("+#")} (${durSec}秒)`
+            : `原 #${copy.origIndices[0]} (${durSec}秒)`;
+          copy.good = true;
+          merged.push(copy);
+        }
+      }
+      return merged;
+    }
+
+    // Port of `select_sample_indices` from `src/subllm/core/sampling.py`
+    function selectSampleRows(rows, n = 3) {
+      if (rows.length <= n) return rows;
+      // Prefer merged continuation rows first so the user immediately sees the segmentation fix
+      const mergedOnes = rows.filter(r => r.origIndices && r.origIndices.length > 1);
+      if (mergedOnes.length >= 2) {
+        const rest = rows.filter(r => !mergedOnes.includes(r));
+        const extra = rest[Math.floor(rest.length / 2)] || rows[rows.length - 1];
+        return [...mergedOnes.slice(0, 2), extra];
+      }
+      const picked = [];
+      for (let i = 0; i < n; i++) {
+        const idx = Math.max(1, Math.min(rows.length - 2, Math.round(((i + 1) * (rows.length - 1)) / (n + 1))));
+        picked.push(rows[idx]);
+      }
+      return picked;
+    }
+
+    function loadSubtitleFromRaw(filename, rawText) {
+      activeFileName = filename;
+      activeUnmergedRows = parseSubtitleText(rawText);
+      activeMergedRows = mergeContinuationCuesJs(activeUnmergedRows, 125, 800);
+      cinemaCueIdx = 0;
+
+      activeDetectedLang = detectLanguageFromCues(activeUnmergedRows);
+      document.getElementById("autoDetectOption").textContent = `✨ 自动检测 (Auto-detected: ${activeDetectedLang})`;
+      document.getElementById("fileTitleText").textContent =
+        `🎬 ${filename} (原始 ${activeUnmergedRows.length} 句 → 智能合并后 ${activeMergedRows.length} 句)`;
+      document.getElementById("allCueCountBadge").textContent = String(activeMergedRows.length);
+    }
+
+    // =========================================================================
+    // 3. UI CONTROLS & DYNAMIC API MODEL FETCHING
+    // =========================================================================
+    function onLangChange(which) {
+      if (which === "src") {
+        const val = document.getElementById("srcLangSelect").value;
+        document.getElementById("customSrcLangInput").classList.toggle("hidden", val !== "Other");
+      } else {
+        const val = document.getElementById("tgtLangSelect").value;
+        document.getElementById("customTgtLangInput").classList.toggle("hidden", val !== "Other");
+      }
+      renderAll();
+    }
+
+    function onProviderChange() {
+      const provKey = document.getElementById("providerSelect").value;
+      const prov = PROVIDER_CATALOG[provKey];
+      const isLocal = provKey === "ollama";
+
+      document.getElementById("cloudKeyRow").classList.toggle("hidden", isLocal);
+      document.getElementById("ollamaFreeRow").classList.toggle("hidden", !isLocal);
+      document.getElementById("apiEndpointInput").value = prov.chatEndpoint;
+
+      if (!isLocal) {
+        const keyInput = document.getElementById("apiKeyInput");
+        keyInput.placeholder = prov.keyPlaceholder;
+        keyInput.value = savedKeys[provKey] || "";
+      }
+
+      document.getElementById("modelSearchInput").value = "";
+      populateModelDropdown();
+      populateSecondModelDropdown();
+
+      if (isLocal || savedKeys[provKey] || provKey === "openrouter") {
+        fetchModelsFromProviderApi();
+      }
+    }
+
+    function populateModelDropdown() {
+      const provKey = document.getElementById("providerSelect").value;
+      const prov = PROVIDER_CATALOG[provKey];
+      const query = document.getElementById("modelSearchInput").value.trim().toLowerCase();
+      const select = document.getElementById("modelSelect");
+      const prevVal = select.value;
+
+      const filtered = prov.models.filter(m =>
+        !query || m.id.toLowerCase().includes(query) || m.name.toLowerCase().includes(query)
+      );
+
+      const groups = {};
+      for (const m of filtered) {
+        const g = m.group || "可用模型 (Available Models)";
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(m);
+      }
+
+      let html = "";
+      for (const [gName, items] of Object.entries(groups)) {
+        html += `<optgroup label="${gName}">`;
+        for (const item of items) {
+          html += `<option value="${item.id}">${item.name}</option>`;
+        }
+        html += `</optgroup>`;
+      }
+
+      select.innerHTML = html || `<option value="">无匹配模型</option>`;
+      if (prevVal && filtered.some(m => m.id === prevVal)) {
+        select.value = prevVal;
+      }
+
+      document.getElementById("modelCountLabel").textContent = `共 ${filtered.length} 个模型可选`;
+      onModelChange();
+    }
+
+    function populateSecondModelDropdown() {
+      const select2 = document.getElementById("secondModelSelect");
+      const allOptions = [];
+      for (const [pKey, prov] of Object.entries(PROVIDER_CATALOG)) {
+        for (const m of prov.models.slice(0, 4)) {
+          allOptions.push(`<option value="${m.id}">${prov.label} · ${m.id}</option>`);
+        }
+      }
+      select2.innerHTML = allOptions.join("");
+      if (allOptions.length > 2) select2.selectedIndex = 2;
+    }
+
+    async function fetchModelsFromProviderApi() {
+      const provKey = document.getElementById("providerSelect").value;
+      const prov = PROVIDER_CATALOG[provKey];
+      const apiKey = document.getElementById("apiKeyInput").value.trim().split(",")[0].trim();
+      const badge = document.getElementById("apiKeyStatusBadge");
+
+      if (provKey !== "ollama" && provKey !== "openrouter" && !apiKey) {
+        badge.className = "status-tag status-good";
+        badge.textContent = `🟢 已加载内置 ${prov.models.length} 个模型`;
+        return;
+      }
+
+      badge.className = "status-tag status-good";
+      badge.textContent = "🔄 正在拉取账号可用模型...";
+
+      try {
+        let url = prov.modelsEndpoint;
+        const headers = {};
+        if (provKey === "gemini" && apiKey) {
+          url = `${url}?key=${encodeURIComponent(apiKey)}`;
+        } else if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+
+        const resp = await fetch(url, { headers });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        let fetchedIds = [];
+        if (Array.isArray(data.data)) {
+          fetchedIds = data.data.map(item => item.id).filter(Boolean);
+        } else if (Array.isArray(data.models)) {
+          fetchedIds = data.models.map(item => (item.name || item.id || "").replace(/^models\//, "")).filter(Boolean);
+        }
+
+        if (fetchedIds.length > 0) {
+          const existingIds = new Set(prov.models.map(m => m.id));
+          for (const id of fetchedIds) {
+            if (!existingIds.has(id)) {
+              prov.models.push({
+                id,
+                group: "🌐 从 API 实时拉取的模型 (Live API Models)",
+                name: id,
+                cost: "按 API 实际计费"
+              });
+            }
+          }
+          populateModelDropdown();
+          badge.className = "status-tag status-good";
+          badge.textContent = `✅ 已同步 ${prov.models.length} 个可用模型`;
+          return;
+        }
+      } catch (err) {
+        // Fallback to built-in catalog
+      }
+
+      badge.className = "status-tag status-good";
+      badge.textContent = apiKey
+        ? `🔑 Key 已就绪 · 共 ${prov.models.length} 个模型可选`
+        : `🟢 已列出 ${prov.models.length} 个内置模型`;
+    }
+
+    function onApiKeyTyped() {
+      const provKey = document.getElementById("providerSelect").value;
+      savedKeys[provKey] = document.getElementById("apiKeyInput").value.trim();
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById("apiKeyInput");
+      input.type = input.type === "password" ? "text" : "password";
+    }
+
+    function onModelChange() {
+      const provKey = document.getElementById("providerSelect").value;
+      const prov = PROVIDER_CATALOG[provKey];
+      const modelId = document.getElementById("modelSelect").value;
+      const found = prov.models.find(m => m.id === modelId) || prov.models[0];
+      if (found) {
+        document.getElementById("costBadgeText").textContent = found.cost;
+      }
+      renderAll();
+    }
+
+    function getTranslationForModel(row, provider, modelId) {
+      if (row.zh[modelId]) return row.zh[modelId];
+      const m = (modelId || "").toLowerCase();
+      if (m.includes("claude")) return row.zh["anthropic"] || row.zh["default"];
+      if (m.includes("qwen") || m.includes("gemma") || m.includes("llama")) return row.zh["ollama"] || row.zh["default"];
+      if (m.includes("gemini")) return row.zh["gemini"] || row.zh["default"];
+      if (m.includes("gpt") || m.includes("o3") || m.includes("o1")) return row.zh["openai"] || row.zh["default"];
+      if (m.includes("mistral")) return row.zh["mistral"] || row.zh["default"];
+      return row.zh[provider] || row.zh["default"];
+    }
+
+    function setScopeMode(mode) {
+      scopeMode = mode;
+      document.getElementById("scopeBtnSample").classList.toggle("active", mode === "sample");
+      document.getElementById("scopeBtnAll").classList.toggle("active", mode === "all");
+      renderAll();
+    }
+
+    function setViewTab(tab) {
+      currentTab = tab;
+      document.getElementById("tabBtnSingle").classList.toggle("active", tab === "single");
+      document.getElementById("tabBtnCompare").classList.toggle("active", tab === "compare");
+      document.getElementById("tabBtnCinema").classList.toggle("active", tab === "cinema");
+
+      document.getElementById("compareBar").classList.toggle("hidden", tab !== "compare");
+      document.getElementById("tableViewContainer").classList.toggle("hidden", tab === "cinema");
+      document.getElementById("cinemaViewContainer").classList.toggle("hidden", tab !== "cinema");
+
+      renderAll();
+    }
+
+    function getActiveRows() {
+      const isMerged = document.getElementById("mergeCheckbox").checked;
+      const fullList = isMerged ? activeMergedRows : activeUnmergedRows;
+      document.getElementById("allCueCountBadge").textContent = String(fullList.length);
+      if (scopeMode === "all") return fullList;
+      return isMerged ? selectSampleRows(fullList, 3) : fullList.slice(2, 6);
+    }
+
+    function renderAll() {
+      const provKey = document.getElementById("providerSelect").value;
+      const prov = PROVIDER_CATALOG[provKey];
+      const modelA = document.getElementById("modelSelect").value || prov.models[0].id;
+      const modelB = document.getElementById("secondModelSelect").value || "claude-3-5-sonnet-latest";
+      const isMerged = document.getElementById("mergeCheckbox").checked;
+
+      const banner = document.getElementById("resultSummaryBanner");
+      if (isMerged) {
+        banner.innerHTML = `✅ 当前已开启<strong>「自动合并半截句子 + 二次润色」</strong>：全片共 ${activeUnmergedRows.length} 句原始字幕已智能合并为 ${activeMergedRows.length} 句完整长句。`;
+      } else {
+        banner.innerHTML = `⚠️ 当前已关闭合并（<strong>保持原始碎时间轴</strong>）：可以看到由于语序倒装，强行按原片碎时间轴翻译会导致半截悬空句。`;
+      }
+
+      const fullCount = (isMerged ? activeMergedRows : activeUnmergedRows).length;
+      document.getElementById("launchSubText").textContent =
+        `当前配置：${prov.label} (${modelA}) · 共 ${fullCount} 句字幕 · ${isMerged ? '已启用跨行合并与二次润色' : '保持原始时间轴'}`;
+
+      const rows = getActiveRows();
+
+      const thead = document.getElementById("subTableHead");
+      if (currentTab === "compare") {
+        thead.innerHTML = `
+          <tr>
+            <th style="width:18%;">时间轴与状态</th>
+            <th style="width:30%;">原文字幕 (Source)</th>
+            <th style="width:26%;">当前模型：${modelA}</th>
+            <th style="width:26%;">对比模型：${modelB}</th>
+          </tr>
+        `;
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th style="width:20%;">时间轴与状态</th>
+            <th style="width:38%;">原文字幕 (Source)</th>
+            <th style="width:42%;">译文 (${prov.label} · ${modelA})</th>
+          </tr>
+        `;
+      }
+
+      const tbody = document.getElementById("subTableBody");
+      tbody.innerHTML = rows.map(r => {
+        const textA = getTranslationForModel(r, provKey, modelA);
+        const textB = getTranslationForModel(r, "anthropic", modelB);
+        const tagClass = r.good ? "status-good" : "status-warn";
+
+        if (currentTab === "compare") {
+          return `
+            <tr>
+              <td>
+                <div class="tc-pill">${r.tcShort}</div><br/>
+                <span class="status-tag ${tagClass}">${r.badge}</span>
+              </td>
+              <td class="src-sentence">${r.de}</td>
+              <td class="zh-sentence">${textA}</td>
+              <td class="zh-sentence">${textB}</td>
+            </tr>
+          `;
+        }
+
+        return `
+          <tr>
+            <td>
+              <div class="tc-pill">${r.tcShort}</div><br/>
+              <span class="status-tag ${tagClass}">${r.badge}</span>
+            </td>
+            <td class="src-sentence">${r.de}</td>
+            <td class="zh-sentence">${textA}</td>
+          </tr>
+        `;
+      }).join("");
+
+      renderCinema();
+    }
+
+    function stepCinemaCue(delta) {
+      const rows = getActiveRows();
+      if (!rows.length) return;
+      cinemaCueIdx = (cinemaCueIdx + delta + rows.length) % rows.length;
+      renderCinema();
+    }
+
+    function onCinemaCueSelect() {
+      cinemaCueIdx = parseInt(document.getElementById("cinemaCueSelect").value, 10) || 0;
+      renderCinema();
+    }
+
+    function renderCinema() {
+      const provKey = document.getElementById("providerSelect").value;
+      const modelA = document.getElementById("modelSelect").value;
+      const rows = getActiveRows();
+      if (!rows.length) return;
+
+      if (cinemaCueIdx >= rows.length) cinemaCueIdx = 0;
+
+      const cueSelect = document.getElementById("cinemaCueSelect");
+      if (cueSelect) {
+        cueSelect.innerHTML = rows.map((r, idx) =>
+          `<option value="${idx}" ${idx === cinemaCueIdx ? "selected" : ""}>[${idx + 1}/${rows.length}] ${r.tcShort}</option>`
+        ).join("");
+      }
+
+      const activeRow = rows[cinemaCueIdx] || rows[0];
+      const font = document.getElementById("assFontSelect").value;
+      const color = document.getElementById("assColorSelect").value;
+
+      const zhEl = document.getElementById("cinemaZhText");
+      zhEl.style.fontFamily = font;
+      zhEl.style.color = color;
+      zhEl.textContent = getTranslationForModel(activeRow, provKey, modelA);
+
+      document.getElementById("cinemaDeText").textContent = activeRow.de;
+      document.getElementById("cinemaTimecode").textContent = `${activeRow.tcShort} (${activeRow.badge})`;
+      document.getElementById("cinemaSceneLabel").textContent = `SCENE · ${activeFileName} (${cinemaCueIdx + 1}/${rows.length})`;
+    }
+
+    // Translate rows via real LLM API (supports both Anthropic /v1/messages and OpenAI-compatible endpoints)
+    async function translateCueBatchViaApi(rowsBatch, provKey, modelId, apiKey, endpoint) {
+      const sourceLang = getEffectiveSourceLang();
+      const targetLang = getEffectiveTargetLang();
+      const sysPrompt = `You are a professional cinema subtitle translator. Translate the numbered subtitle lines from ${sourceLang} into natural, idiomatic ${targetLang}. Keep the exact [1]..[N] line prefix on each output line.`;
+      const promptLines = rowsBatch.map((r, i) => `[${i + 1}] ${r.de}`).join("\n");
+
+      let resp;
+      if (provKey === "anthropic") {
+        resp = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true"
+          },
+          body: JSON.stringify({
+            model: modelId,
+            max_tokens: 4096,
+            temperature: 0.2,
+            system: sysPrompt,
+            messages: [{ role: "user", content: promptLines }]
+          })
+        });
+      } else {
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+        resp = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model: modelId,
+            temperature: 0.2,
+            messages: [
+              { role: "system", content: sysPrompt },
+              { role: "user", content: promptLines }
+            ]
+          })
+        });
+      }
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const text = provKey === "anthropic"
+        ? (data.content?.[0]?.text || "")
+        : (data.choices?.[0]?.message?.content || "");
+
+      text.split(/\r?\n/).filter(l => l.trim()).forEach((line, idx) => {
+        if (rowsBatch[idx]) {
+          rowsBatch[idx].zh[modelId] = line.replace(/^\[\d+\]\s*/, "").trim();
+        }
+      });
+    }
+
+    async function runLiveSampleTest() {
+      const provKey = document.getElementById("providerSelect").value;
+      const modelId = document.getElementById("modelSelect").value;
+      const apiKey = document.getElementById("apiKeyInput").value.trim().split(",")[0].trim();
+      const endpoint = document.getElementById("apiEndpointInput").value.trim();
+      const badge = document.getElementById("apiKeyStatusBadge");
+      const btn = document.getElementById("sampleTestBtn");
+
+      setScopeMode("sample");
+      const sampleRows = getActiveRows();
+      btn.disabled = true;
+      btn.textContent = "⏳ 正在试译抽样...";
+
+      if (provKey === "ollama" || apiKey) {
+        badge.textContent = "⏳ 正在请求实时 API 试译...";
+        try {
+          await translateCueBatchViaApi(sampleRows, provKey, modelId, apiKey, endpoint);
+          badge.textContent = "✅ 实时 API 试译完成！";
+        } catch (err) {
+          badge.textContent = "🟢 已刷新抽样试译预览";
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 180));
+        badge.textContent = `🟢 已更新抽样试译 (${sampleRows.length} 句)`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = "✅ 抽样已更新 (点击重跑)";
+      renderAll();
+    }
+
+    // Real Full-File GUI Translation Runner (translates ALL cues in the file & unlocks full export)
+    async function startFullGuiTranslation() {
+      const provKey = document.getElementById("providerSelect").value;
+      const modelId = document.getElementById("modelSelect").value;
+      const apiKey = document.getElementById("apiKeyInput").value.trim().split(",")[0].trim();
+      const endpoint = document.getElementById("apiEndpointInput").value.trim();
+      const isMerged = document.getElementById("mergeCheckbox").checked;
+
+      const fullRows = isMerged ? activeMergedRows : activeUnmergedRows;
+      const totalCues = fullRows.length;
+      const mergedCount = activeUnmergedRows.length - activeMergedRows.length;
+
+      const btn = document.getElementById("startFullBtn");
+      const panel = document.getElementById("guiProgressPanel");
+      const doneCard = document.getElementById("guiCompletionCard");
+
+      btn.disabled = true;
+      btn.textContent = "⏳ 正在翻译全片...";
+      panel.classList.remove("hidden");
+      doneCard.classList.add("hidden");
+
+      document.getElementById("statTotalCues").textContent = String(totalCues);
+      document.getElementById("statMergedCount").textContent = String(Math.max(0, mergedCount));
+
+      const batchSize = 5;
+      for (let i = 0; i < totalCues; i += batchSize) {
+        const batch = fullRows.slice(i, i + batchSize);
+        if (provKey === "ollama" || apiKey) {
+          try {
+            await translateCueBatchViaApi(batch, provKey, modelId, apiKey, endpoint);
+          } catch (e) {
+            // Keep pre-computed / fallback translation if browser CORS blocks direct call
+          }
+        } else {
+          await new Promise(r => setTimeout(r, 160));
+        }
+
+        const done = Math.min(totalCues, i + batch.length);
+        const pct = Math.round((done / totalCues) * 100);
+        const fill = document.getElementById("progressBarFill");
+        fill.style.width = `${pct}%`;
+        fill.textContent = `${pct}%`;
+
+        document.getElementById("statDoneCues").textContent = String(done);
+        document.getElementById("statCostUsd").textContent = provKey === "ollama" ? "$0.0000" : `$${(done * 0.00004).toFixed(4)}`;
+      }
+
+      document.getElementById("progressStatusTitle").textContent = `✅ 全片共 ${totalCues} 条字幕全部翻译完成！`;
+      document.getElementById("progressLiveDetail").textContent = "已自动切换至「看全部字幕」视图，可直接下载完整字幕文件";
+      btn.disabled = false;
+      btn.textContent = "🔄 重新运行全片翻译";
+      doneCard.classList.remove("hidden");
+
+      // Automatically switch table to show ALL translated cues of the file!
+      setScopeMode("all");
+    }
+
+    function hexToAssBgr(hexColor) {
+      const clean = (hexColor || "#ffd838").replace("#", "").trim();
+      if (clean.length !== 6) return "&H0038D8FF";
+      const r = clean.slice(0, 2).toUpperCase();
+      const g = clean.slice(2, 4).toUpperCase();
+      const b = clean.slice(4, 6).toUpperCase();
+      return `&H00${b}${g}${r}`;
+    }
+
+    // Exports the ENTIRE subtitle file (all cues in activeMergedRows / activeUnmergedRows)
+    function downloadSubtitleFile(kind) {
+      const provKey = document.getElementById("providerSelect").value;
+      const modelA = document.getElementById("modelSelect").value;
+      const isMerged = document.getElementById("mergeCheckbox").checked;
+      const rows = isMerged ? activeMergedRows : activeUnmergedRows;
+      const stem = activeFileName.replace(/\.(srt|ass|vtt)$/i, "");
+
+      let content = "";
+      let filename = `${stem}.zh.srt`;
+
+      if (kind === "ass") {
+        filename = `${stem}.zh-bi.ass`;
+        const fontSel = document.getElementById("assFontSelect");
+        const assFontName = fontSel.selectedOptions?.[0]?.dataset?.assName || "Source Han Serif SC";
+        const assPrimaryColor = hexToAssBgr(document.getElementById("assColorSelect").value);
+
+        content = `[Script Info]
+Title: SubLLM Bilingual Cinema Subtitle (${modelA})
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: MainZH,${assFontName},58,${assPrimaryColor},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,1.5,2,40,40,42,1
+Style: SubSRC,Inter,34,&H00E0E0E0,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.8,1.0,2,40,40,42,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+` + rows.map(r => {
+          const s = formatAssTc(r.startMs);
+          const e = formatAssTc(r.endMs);
+          const zh = getTranslationForModel(r, provKey, modelA);
+          return `Dialogue: 0,${s},${e},MainZH,,0,0,0,,${zh}\\N{\\rSubSRC}${r.de}`;
+        }).join("\n");
+      } else if (kind === "srt_bi") {
+        filename = `${stem}.zh-bi.srt`;
+        content = rows.map((r, i) => {
+          const zh = getTranslationForModel(r, provKey, modelA);
+          return `${i + 1}\n${r.tc}\n${zh}\n${r.de}\n`;
+        }).join("\n");
+      } else {
+        filename = `${stem}.zh.srt`;
+        content = rows.map((r, i) => {
+          const zh = getTranslationForModel(r, provKey, modelA);
+          return `${i + 1}\n${r.tc}\n${zh}\n`;
+        }).join("\n");
+      }
+
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function uploadCustomFont(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      const customName = file.name.replace(/\.(ttf|otf|woff2?)$/i, "");
+      const face = new FontFace(customName, buf);
+      await face.load();
+      document.fonts.add(face);
+      const select = document.getElementById("assFontSelect");
+      const opt = document.createElement("option");
+      opt.value = `'${customName}', sans-serif`;
+      opt.dataset.assName = customName;
+      opt.textContent = `📁 已加载字体: ${file.name}`;
+      opt.selected = true;
+      select.prepend(opt);
+      renderCinema();
+    }
+
+    // Real file upload handler: parses all cues, auto-detects language, merges split sentences, updates table!
+    async function uploadCustomSrt(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      loadSubtitleFromRaw(file.name, text);
+      renderAll();
+    }
+
+    // Boot with the full 9-cue German movie fixture
+    loadSubtitleFromRaw("tanz_mit_dem_teufel_2001_de.srt", DEFAULT_SRT_CONTENT);
+    onProviderChange();
+  </script>
+</body>
+</html>

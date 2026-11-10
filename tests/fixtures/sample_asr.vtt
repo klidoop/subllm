@@ -1,0 +1,13 @@
+WEBVTT
+
+00:00:00.500 --> 00:00:02.100
+Welcome back to Lecture 4 on
+
+00:00:02.150 --> 00:00:04.200
+Point-in-Time Feature Engineering and
+
+00:00:04.250 --> 00:00:06.800
+why target leakage destroys production ML models.
+
+00:00:10.500 --> 00:00:13.000
+Let's look at the Dixon-Coles bivariate Poisson matrix first.
