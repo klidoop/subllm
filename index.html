@@ -1809,15 +1809,32 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       document.getElementById("cinemaSceneLabel").textContent = `SCENE · ${activeFileName} (${cinemaCueIdx + 1}/${rows.length})`;
     }
 
-    // Translate rows via real LLM API (supports both Anthropic /v1/messages and OpenAI-compatible endpoints)
+    // Translate rows via real LLM API (supports Gemini native, Anthropic native, and OpenAI-compatible endpoints)
     async function translateCueBatchViaApi(rowsBatch, provKey, modelId, apiKey, endpoint) {
       const sourceLang = getEffectiveSourceLang();
       const targetLang = getEffectiveTargetLang();
-      const sysPrompt = `You are a professional cinema subtitle translator. Translate the numbered subtitle lines from ${sourceLang} into natural, idiomatic ${targetLang}. Keep the exact [1]..[N] line prefix on each output line.`;
+      const sysPrompt = `You are a professional cinema subtitle translator. Translate the numbered subtitle lines from ${sourceLang} into natural, idiomatic ${targetLang}. Keep the exact [1]..[N] line prefix on each output line and output ONLY the translated lines.`;
       const promptLines = rowsBatch.map((r, i) => `[${i + 1}] ${r.de}`).join("\n");
 
       let resp;
-      if (provKey === "anthropic") {
+      let text = "";
+
+      if (provKey === "gemini") {
+        const cleanModel = (modelId || "gemini-2.5-flash").replace(/^models\//, "");
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        resp = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: sysPrompt }] },
+            contents: [{ role: "user", parts: [{ text: promptLines }] }],
+            generationConfig: { temperature: 0.2 }
+          })
+        });
+        if (!resp.ok) throw new Error(`Gemini HTTP ${resp.status}`);
+        const data = await resp.json();
+        text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else if (provKey === "anthropic") {
         resp = await fetch(endpoint, {
           method: "POST",
           headers: {
@@ -1834,6 +1851,9 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
             messages: [{ role: "user", content: promptLines }]
           })
         });
+        if (!resp.ok) throw new Error(`Anthropic HTTP ${resp.status}`);
+        const data = await resp.json();
+        text = data.content?.[0]?.text || "";
       } else {
         const headers = { "Content-Type": "application/json" };
         if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
@@ -1849,16 +1869,20 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
             ]
           })
         });
+        if (!resp.ok) throw new Error(`API HTTP ${resp.status}`);
+        const data = await resp.json();
+        text = data.choices?.[0]?.message?.content || "";
       }
 
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      const text = provKey === "anthropic"
-        ? (data.content?.[0]?.text || "")
-        : (data.choices?.[0]?.message?.content || "");
-
-      text.split(/\r?\n/).filter(l => l.trim()).forEach((line, idx) => {
-        if (rowsBatch[idx]) {
+      const outLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => /^\[\d+\]/.test(l) || l.length > 0);
+      outLines.forEach((line, idx) => {
+        const m = line.match(/^\[(\d+)\]\s*(.*)/);
+        if (m) {
+          const targetIdx = parseInt(m[1], 10) - 1;
+          if (rowsBatch[targetIdx] && m[2]) {
+            rowsBatch[targetIdx].zh[modelId] = m[2].trim();
+          }
+        } else if (rowsBatch[idx]) {
           rowsBatch[idx].zh[modelId] = line.replace(/^\[\d+\]\s*/, "").trim();
         }
       });
@@ -1871,23 +1895,38 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       const endpoint = document.getElementById("apiEndpointInput").value.trim();
       const badge = document.getElementById("apiKeyStatusBadge");
       const btn = document.getElementById("sampleTestBtn");
+      const isCustomFile = activeFileName !== "tanz_mit_dem_teufel_2001_de.srt";
 
       setScopeMode("sample");
       const sampleRows = getActiveRows();
+
+      if (isCustomFile && provKey !== "ollama" && !apiKey) {
+        badge.className = "status-tag status-warn";
+        badge.textContent = "⚠️ 翻译自定义字幕请先填入上方 API Key";
+        alert("提示：内置免 Key 预览仅包含默认的 9 句德语电影示例。\n要翻译你上传的自定义字幕文件，请在上方第 ② 步粘贴 API Key（或切换为本地 Ollama）。");
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = "⏳ 正在试译抽样...";
 
       if (provKey === "ollama" || apiKey) {
-        badge.textContent = "⏳ 正在请求实时 API 试译...";
+        badge.className = "status-tag status-good";
+        badge.textContent = "⏳ 正在请求实时大模型 API 试译...";
         try {
           await translateCueBatchViaApi(sampleRows, provKey, modelId, apiKey, endpoint);
+          badge.className = "status-tag status-good";
           badge.textContent = "✅ 实时 API 试译完成！";
         } catch (err) {
-          badge.textContent = "🟢 已刷新抽样试译预览";
+          badge.className = "status-tag status-warn";
+          badge.textContent = provKey === "ollama"
+            ? "⚠️ 无法连接本机 Ollama (请确认已运行 OLLAMA_ORIGINS=* ollama serve)"
+            : `⚠️ API 请求失败 (${err.message})`;
         }
       } else {
         await new Promise(r => setTimeout(r, 180));
-        badge.textContent = `🟢 已更新抽样试译 (${sampleRows.length} 句)`;
+        badge.className = "status-tag status-good";
+        badge.textContent = `🟢 已展示内置示例译文 (${sampleRows.length} 句)`;
       }
 
       btn.disabled = false;
@@ -1902,6 +1941,15 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       const apiKey = document.getElementById("apiKeyInput").value.trim().split(",")[0].trim();
       const endpoint = document.getElementById("apiEndpointInput").value.trim();
       const isMerged = document.getElementById("mergeCheckbox").checked;
+      const isCustomFile = activeFileName !== "tanz_mit_dem_teufel_2001_de.srt";
+      const badge = document.getElementById("apiKeyStatusBadge");
+
+      if (isCustomFile && provKey !== "ollama" && !apiKey) {
+        badge.className = "status-tag status-warn";
+        badge.textContent = "⚠️ 翻译自定义字幕请先填入上方 API Key";
+        alert("提示：内置免 Key 译文仅包含默认的 9 句德语电影示例。\n要翻译你上传的自定义字幕文件，请在上方第 ② 步粘贴 API Key（或切换为本地 Ollama）。");
+        return;
+      }
 
       const fullRows = isMerged ? activeMergedRows : activeUnmergedRows;
       const totalCues = fullRows.length;
@@ -1920,13 +1968,15 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       document.getElementById("statMergedCount").textContent = String(Math.max(0, mergedCount));
 
       const batchSize = 5;
+      let hadError = null;
       for (let i = 0; i < totalCues; i += batchSize) {
         const batch = fullRows.slice(i, i + batchSize);
         if (provKey === "ollama" || apiKey) {
           try {
             await translateCueBatchViaApi(batch, provKey, modelId, apiKey, endpoint);
           } catch (e) {
-            // Keep pre-computed / fallback translation if browser CORS blocks direct call
+            hadError = e;
+            break;
           }
         } else {
           await new Promise(r => setTimeout(r, 160));
@@ -1942,10 +1992,19 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
         document.getElementById("statCostUsd").textContent = provKey === "ollama" ? "$0.0000" : `$${(done * 0.00004).toFixed(4)}`;
       }
 
-      document.getElementById("progressStatusTitle").textContent = `✅ 全片共 ${totalCues} 条字幕全部翻译完成！`;
-      document.getElementById("progressLiveDetail").textContent = "已自动切换至「看全部字幕」视图，可直接下载完整字幕文件";
       btn.disabled = false;
       btn.textContent = "🔄 重新运行全片翻译";
+
+      if (hadError) {
+        document.getElementById("progressStatusTitle").textContent = `⚠️ 翻译中断：${hadError.message}`;
+        document.getElementById("progressLiveDetail").textContent = provKey === "ollama"
+          ? "无法连接本机 http://localhost:11434，请确认本机已安装并运行 OLLAMA_ORIGINS=\"*\" ollama serve"
+          : "请检查 API Key 是否有效、账户余额是否充足，或接口是否允许跨域访问";
+        return;
+      }
+
+      document.getElementById("progressStatusTitle").textContent = `✅ 全片共 ${totalCues} 条字幕全部翻译完成！`;
+      document.getElementById("progressLiveDetail").textContent = "已自动切换至「看全部字幕」视图，可直接下载完整字幕文件";
       doneCard.classList.remove("hidden");
 
       // Automatically switch table to show ALL translated cues of the file!
