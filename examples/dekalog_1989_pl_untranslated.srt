@@ -1,0 +1,31 @@
+1
+00:01:02,000 --> 00:01:04,300
+Tato, czy wprowadziłeś już do komputera
+
+2
+00:01:04,450 --> 00:01:06,900
+wszystkie dane z porannego komunikatu meteorologicznego?
+
+3
+00:01:08,500 --> 00:01:10,400
+Tak, Pawełku, sprawdzałem to przed chwilą
+
+4
+00:01:10,550 --> 00:01:13,100
+i według równania wytrzymałości lodu na jeziorze
+
+5
+00:01:13,250 --> 00:01:15,800
+tafla wytrzyma dzisiaj ciężar trzykrotnie większy niż twój.
+
+6
+00:01:19,200 --> 00:01:21,300
+Ale ciocia Irena mówiła wczoraj wieczorem,
+
+7
+00:01:21,450 --> 00:01:24,000
+że są rzeczy, których żaden komputer nie potrafi obliczyć.
+
+8
+00:01:27,500 --> 00:01:29,600
+<i>[Telefon dzwoni w przedpokoju]</i> Śpij już, jutro rano pójdziemy na ślizgawkę.

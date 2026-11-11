@@ -498,12 +498,23 @@
         <div class="setup-box">
           <div class="setup-label">
             <span>① 字幕文件与语言 (支持自动检测 + 45 种语言 + 自定义)</span>
-            <label style="color:var(--primary); cursor:pointer; text-decoration:underline;">
-              📂 上传本地 .srt/.ass/.vtt
-              <input type="file" accept=".srt,.ass,.vtt" style="display:none;" onchange="uploadCustomSrt(event)" />
-            </label>
+            <span style="display:flex; gap:10px; align-items:center;">
+              <a href="javascript:void(0)" onclick="downloadRawSourceSrt()" style="color:var(--text-muted); text-decoration:underline; font-size:11.5px;">⬇️ 下载当前原片 .srt</a>
+              <label style="color:var(--primary); cursor:pointer; text-decoration:underline;">
+                📂 上传本地 .srt/.ass/.vtt
+                <input type="file" accept=".srt,.ass,.vtt" style="display:none;" onchange="uploadCustomSrt(event)" />
+              </label>
+            </span>
           </div>
-          <div style="font-weight:800; font-size:13.5px;" id="fileTitleText">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="sampleFixtureSelect" class="clean-select" style="font-size:12.5px; padding:5px 8px; font-weight:700;" onchange="onSampleFixtureChange()">
+              <option value="de_tanz">🇩🇪 德语《与魔鬼共舞》tanz_mit_dem_teufel_2001_de.srt (含免 Key 预置译文)</option>
+              <option value="da_jagten">🇩🇰 丹麦语《狩猎》jagten_2012_da_untranslated.srt (纯原文无翻译 · 实测 API)</option>
+              <option value="pl_dekalog">🇵🇱 波兰语《十诫》dekalog_1989_pl_untranslated.srt (纯原文无翻译 · 实测 API)</option>
+              <option value="it_bellezza">🇮🇹 意大利语《绝美之城》la_grande_bellezza_2013_it_untranslated.srt (纯原文无翻译 · 实测 API)</option>
+            </select>
+          </div>
+          <div style="font-weight:700; font-size:12px; color:var(--text-muted);" id="fileTitleText">
             🎬 tanz_mit_dem_teufel_2001_de.srt (共 9 句原始字幕 → 合并后 7 句)
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px;">
@@ -1111,7 +1122,132 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
 00:00:23,000 --> 00:00:25,400
 <i>[Tonbandgerät klickt]</i> Ich melde mich um Punkt vierzehn Uhr wieder, Herr Kommissar.`;
 
-    // Pre-computed high-precision multi-model translations for the built-in German fixture
+    const SAMPLE_FIXTURES = {
+      de_tanz: {
+        filename: "tanz_mit_dem_teufel_2001_de.srt",
+        raw: DEFAULT_SRT_CONTENT
+      },
+      da_jagten: {
+        filename: "jagten_2012_da_untranslated.srt",
+        raw: `1
+00:00:12,100 --> 00:00:14,200
+<i>[Dørklokken ringer i supermarkedet]</i>
+
+2
+00:00:15,400 --> 00:00:17,300
+Lucas, vi har fået besked på,
+
+3
+00:00:17,450 --> 00:00:19,800
+at du ikke længere må handle her i brugsen,
+
+4
+00:00:19,950 --> 00:00:22,300
+indtil politiet er helt færdige med deres undersøgelse.
+
+5
+00:00:24,100 --> 00:00:26,000
+Hvad er det dog for noget vrøvl, Bruun?
+
+6
+00:00:26,200 --> 00:00:28,150
+Jeg forstår simpelthen ikke,
+
+7
+00:00:28,300 --> 00:00:30,600
+hvordan I kan tro på sådan en løgn
+
+8
+00:00:30,750 --> 00:00:33,200
+efter at vi har kendt hinanden i over tredive år!
+
+9
+00:00:36,500 --> 00:00:38,400
+Se mig i øjnene, Theo,
+
+10
+00:00:38,550 --> 00:00:41,100
+og sig til mig, at du virkelig tror, jeg har gjort Klara fortræd.
+
+11
+00:00:44,800 --> 00:00:46,900
+Gå nu bare hjem, Lucas,
+
+12
+00:00:47,050 --> 00:00:49,500
+før det ender galt for os alle sammen.`
+      },
+      pl_dekalog: {
+        filename: "dekalog_1989_pl_untranslated.srt",
+        raw: `1
+00:01:02,000 --> 00:01:04,300
+Tato, czy wprowadziłeś już do komputera
+
+2
+00:01:04,450 --> 00:01:06,900
+wszystkie dane z porannego komunikatu meteorologicznego?
+
+3
+00:01:08,500 --> 00:01:10,400
+Tak, Pawełku, sprawdzałem to przed chwilą
+
+4
+00:01:10,550 --> 00:01:13,100
+i według równania wytrzymałości lodu na jeziorze
+
+5
+00:01:13,250 --> 00:01:15,800
+tafla wytrzyma dzisiaj ciężar trzykrotnie większy niż twój.
+
+6
+00:01:19,200 --> 00:01:21,300
+Ale ciocia Irena mówiła wczoraj wieczorem,
+
+7
+00:01:21,450 --> 00:01:24,000
+że są rzeczy, których żaden komputer nie potrafi obliczyć.
+
+8
+00:01:27,500 --> 00:01:29,600
+<i>[Telefon dzwoni w przedpokoju]</i> Śpij już, jutro rano pójdziemy na ślizgawkę.`
+      },
+      it_bellezza: {
+        filename: "la_grande_bellezza_2013_it_untranslated.srt",
+        raw: `1
+00:02:10,000 --> 00:02:12,200
+Quando sono arrivato a Roma a ventisei anni,
+
+2
+00:02:12,350 --> 00:02:14,800
+sono precipitato abbastanza presto, quasi senza rendermene conto,
+
+3
+00:02:14,950 --> 00:02:17,500
+in quello che potremmo definire il vortice della mondanità.
+
+4
+00:02:21,100 --> 00:02:23,200
+Ma io non volevo essere semplicemente un mondano,
+
+5
+00:02:23,350 --> 00:02:26,000
+volevo diventare il re dei mondani.
+
+6
+00:02:29,400 --> 00:02:31,500
+Mi chiedono spesso perché non ho più scritto un altro romanzo,
+
+7
+00:02:31,650 --> 00:02:34,200
+ma la verità è che cercavo la grande bellezza
+
+8
+00:02:34,350 --> 00:02:36,900
+e non l'ho mai trovata.`
+      }
+    };
+
+    // Pre-computed high-precision multi-model translations ONLY for the built-in German demo fixture
     const BUILTIN_TRANSLATIONS = {
       "FREISING BEI MÜNCHEN - 14. DEZEMBER 1976": {
         default: "慕尼黑近郊弗赖辛 · 1976年12月14日",
@@ -1178,6 +1314,7 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
     };
 
     let activeFileName = "tanz_mit_dem_teufel_2001_de.srt";
+    let activeRawSrtText = DEFAULT_SRT_CONTENT;
     let activeDetectedLang = "German";
     let activeUnmergedRows = [];
     let activeMergedRows = [];
@@ -1233,9 +1370,18 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
       if (/[\u3040-\u30ff]/.test(sample)) return "Japanese";
       if (/[\uac00-\ud7af]/.test(sample)) return "Korean";
       if (/[\u0400-\u04ff]/.test(sample)) return "Russian";
+      if (/[\u0600-\u06ff]/.test(sample)) return "Arabic";
+      if (/[\u0590-\u05ff]/.test(sample)) return "Hebrew";
+      if (/[\u0370-\u03ff]/.test(sample)) return "Greek";
+      if (/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]|\b(czy|nie|jest|tylko|wszystkie|przed|żaden)\b/i.test(sample)) return "Polish";
+      if (/[æøÆØ]|\b(ikke|hvordan|hinanden|noget|brugsen|politiet|færdige)\b/i.test(sample)) return "Danish";
+      if (/\b(della|questo|perché|sono|nella|mondanità|quando|verità|romanzo)\b/i.test(sample)) return "Italian";
       if (/[äöüßÄÖÜ]|\b(und|der|die|das|nicht|Herr)\b/i.test(sample)) return "German";
       if (/\b(le|la|les|des|est|une|dans|pour|avec)\b/i.test(sample)) return "French";
       if (/[ñ¿¡]|\b(el|la|los|las|por|para|una|con)\b/i.test(sample)) return "Spanish";
+      if (/\b(het|een|niet|voor|naar|maar|deze)\b/i.test(sample)) return "Dutch";
+      if (/\b(och|att|det|som|inte|också)\b/i.test(sample)) return "Swedish";
+      if (/[ğışĞİŞ]|\b(bir|için|değil|ama)\b/i.test(sample)) return "Turkish";
       return "English";
     }
 
@@ -1255,6 +1401,7 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
     function buildCueObj(origIdx, startMs, endMs, cleanText) {
       const durSec = Math.max(0.5, (endMs - startMs) / 1000).toFixed(1);
       const hasTerminal = /[.!?。！？…"'”’\]\)]\s*$/.test(cleanText);
+      const builtin = BUILTIN_TRANSLATIONS[cleanText];
       return {
         origIndices: [origIdx],
         startMs,
@@ -1264,7 +1411,7 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
         badge: hasTerminal ? `原 #${origIdx} (${durSec}秒)` : `⚠️ 原 #${origIdx} (仅 ${durSec}秒 · 句末未完结)`,
         good: hasTerminal,
         de: cleanText,
-        zh: { ...(BUILTIN_TRANSLATIONS[cleanText] || { default: cleanText }) }
+        zh: builtin ? { ...builtin } : {}
       };
     }
 
@@ -1317,7 +1464,7 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
     }
 
     // Real port of `merge_continuation_cues` (SRTProcessor.merge_multiline_subtitles)
-    function mergeContinuationCuesJs(unmergedCues, maxChars = 125, maxGapMs = 800) {
+    function mergeContinuationCuesJs(unmergedCues, maxChars = 162, maxGapMs = 800) {
       if (!unmergedCues.length) return [];
       const merged = [];
       for (const cue of unmergedCues) {
@@ -1340,7 +1487,8 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
           const durSec = ((prev.endMs - prev.startMs) / 1000).toFixed(1);
           prev.badge = `✅ 已合并原 #${prev.origIndices.join("+#")} (停留 ${durSec}秒)`;
           prev.good = true;
-          prev.zh = { ...(BUILTIN_TRANSLATIONS[combinedText] || { default: combinedText }) };
+          const builtin = BUILTIN_TRANSLATIONS[combinedText];
+          prev.zh = builtin ? { ...builtin } : {};
         } else {
           const copy = JSON.parse(JSON.stringify(cue));
           const durSec = ((copy.endMs - copy.startMs) / 1000).toFixed(1);
@@ -1374,14 +1522,15 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
 
     function loadSubtitleFromRaw(filename, rawText) {
       activeFileName = filename;
+      activeRawSrtText = rawText;
       activeUnmergedRows = parseSubtitleText(rawText);
-      activeMergedRows = mergeContinuationCuesJs(activeUnmergedRows, 125, 800);
+      activeMergedRows = mergeContinuationCuesJs(activeUnmergedRows, 162, 800);
       cinemaCueIdx = 0;
 
       activeDetectedLang = detectLanguageFromCues(activeUnmergedRows);
       document.getElementById("autoDetectOption").textContent = `✨ 自动检测 (Auto-detected: ${activeDetectedLang})`;
       document.getElementById("fileTitleText").textContent =
-        `🎬 ${filename} (原始 ${activeUnmergedRows.length} 句 → 智能合并后 ${activeMergedRows.length} 句)`;
+        `🎬 ${filename} (原始 ${activeUnmergedRows.length} 句 → 智能合并后 ${activeMergedRows.length} 句 · 自动识别为 ${activeDetectedLang})`;
       document.getElementById("allCueCountBadge").textContent = String(activeMergedRows.length);
     }
 
@@ -1557,12 +1706,14 @@ Der Kerl benutzt öffentliche Münzfernsprecher an der Autobahn und wechselt all
     function getTranslationForModel(row, provider, modelId) {
       if (row.zh[modelId]) return row.zh[modelId];
       const m = (modelId || "").toLowerCase();
-      if (m.includes("claude")) return row.zh["anthropic"] || row.zh["default"];
-      if (m.includes("qwen") || m.includes("gemma") || m.includes("llama")) return row.zh["ollama"] || row.zh["default"];
-      if (m.includes("gemini")) return row.zh["gemini"] || row.zh["default"];
-      if (m.includes("gpt") || m.includes("o3") || m.includes("o1")) return row.zh["openai"] || row.zh["default"];
-      if (m.includes("mistral")) return row.zh["mistral"] || row.zh["default"];
-      return row.zh[provider] || row.zh["default"];
+      let found = null;
+      if (m.includes("claude")) found = row.zh["anthropic"] || row.zh["default"];
+      else if (m.includes("qwen") || m.includes("gemma") || m.includes("llama")) found = row.zh["ollama"] || row.zh["default"];
+      else if (m.includes("gemini")) found = row.zh["gemini"] || row.zh["default"];
+      else if (m.includes("gpt") || m.includes("o3") || m.includes("o1")) found = row.zh["openai"] || row.zh["default"];
+      else if (m.includes("mistral")) found = row.zh["mistral"] || row.zh["default"];
+      else found = row.zh[provider] || row.zh["default"];
+      return found || "⏳ [待翻译纯原文 — 请在上方第 ② 步填入 API Key 后点击「🧪 试译当前抽样」或「▶️ 开始翻译全片字幕」]";
     }
 
     function setScopeMode(mode) {
@@ -2137,11 +2288,43 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       renderCinema();
     }
 
+    function onSampleFixtureChange() {
+      const key = document.getElementById("sampleFixtureSelect").value;
+      const fix = SAMPLE_FIXTURES[key];
+      if (!fix) return;
+      document.getElementById("srcLangSelect").value = "Auto";
+      loadSubtitleFromRaw(fix.filename, fix.raw);
+      renderAll();
+    }
+
+    function downloadRawSourceSrt() {
+      const blob = new Blob([activeRawSrtText], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = activeFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     // Real file upload handler: parses all cues, auto-detects language, merges split sentences, updates table!
     async function uploadCustomSrt(e) {
       const file = e.target.files?.[0];
       if (!file) return;
       const text = await file.text();
+      const customKey = `custom_${Date.now()}`;
+      SAMPLE_FIXTURES[customKey] = { filename: file.name, raw: text };
+      const sel = document.getElementById("sampleFixtureSelect");
+      if (sel) {
+        const opt = document.createElement("option");
+        opt.value = customKey;
+        opt.textContent = `📂 本地上传: ${file.name}`;
+        opt.selected = true;
+        sel.prepend(opt);
+      }
+      document.getElementById("srcLangSelect").value = "Auto";
       loadSubtitleFromRaw(file.name, text);
       renderAll();
     }
