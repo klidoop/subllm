@@ -924,13 +924,13 @@
       </div>
 
       <!-- Completion & 1-Click File Download Card -->
-      <div id="guiCompletionCard" class="completion-card hidden">
+      <div id="guiCompletionCard" class="completion-card">
         <div>
           <div style="font-weight:800; font-size:15px; color:var(--good);" id="completionTitleText">
-            ✅ 全片字幕全部翻译完成！
+            💾 导出与下载字幕文件 (.ASS / 双语 .SRT / 纯译文 .SRT)
           </div>
-          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">
-            下方表格已切换为全部字幕预览，点击右侧按钮直接保存完整字幕文件到本地电脑：
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;" id="completionSubText">
+            点击右侧按钮即可直接下载到本地电脑（若在聊天内嵌预览框中被浏览器沙盒拦截，下方会自动展开完整文件内容并自动复制到剪贴板）：
           </div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -944,6 +944,32 @@
             ⬇️ 下载纯目标语言 .SRT
           </button>
         </div>
+      </div>
+
+      <!-- Instant Export Content Drawer (Guarantees 100% export even inside sandboxed chat iframes) -->
+      <div id="exportPreviewDrawer" class="hidden" style="margin-top:12px; padding:14px 16px; border-radius:10px; border:1px solid var(--good); background:var(--bg-subtle);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+          <div>
+            <span style="font-weight:800; font-size:13.5px; color:var(--good);" id="exportDrawerTitle">
+              ✅ 已生成字幕文件
+            </span>
+            <span style="font-size:12px; color:var(--text-muted); margin-left:6px;" id="exportDrawerHint">
+              (已同时触发浏览器下载 + 自动复制到剪贴板)
+            </span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" style="padding:5px 12px; font-size:12px;" onclick="copyExportedContent()" id="copyExportBtn">
+              📋 一键复制完整文件内容
+            </button>
+            <button type="button" class="btn" style="padding:5px 12px; font-size:12px;" onclick="saveExportViaPicker()">
+              💾 系统另存为 (Save As...)
+            </button>
+            <a href="https://klidoop.github.io/subllm/" target="_blank" rel="noopener" class="btn" style="padding:5px 12px; font-size:12px; text-decoration:none;">
+              ↗️ 在独立浏览器标签页打开
+            </a>
+          </div>
+        </div>
+        <textarea id="exportPreviewTextarea" readonly style="width:100%; height:180px; font-family:ui-monospace, 'JetBrains Mono', monospace; font-size:12px; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); resize:vertical;"></textarea>
       </div>
 
     </section>
@@ -2053,10 +2079,16 @@ e non l'ho mai trovata.`
         if (m) {
           const targetIdx = parseInt(m[1], 10) - 1;
           if (rowsBatch[targetIdx] && m[2]) {
-            rowsBatch[targetIdx].zh[modelId] = m[2].trim();
+            const cleanZh = m[2].trim();
+            rowsBatch[targetIdx].zh[modelId] = cleanZh;
+            rowsBatch[targetIdx].zh[provKey] = cleanZh;
+            rowsBatch[targetIdx].zh["default"] = cleanZh;
           }
         } else if (rowsBatch[idx]) {
-          rowsBatch[idx].zh[modelId] = line.replace(/^\[\d+\]\s*/, "").trim();
+          const cleanZh = line.replace(/^\[\d+\]\s*/, "").trim();
+          rowsBatch[idx].zh[modelId] = cleanZh;
+          rowsBatch[idx].zh[provKey] = cleanZh;
+          rowsBatch[idx].zh["default"] = cleanZh;
         }
       });
     }
@@ -2135,7 +2167,6 @@ e non l'ho mai trovata.`
       btn.disabled = true;
       btn.textContent = "⏳ 正在翻译全片...";
       panel.classList.remove("hidden");
-      doneCard.classList.add("hidden");
 
       document.getElementById("statTotalCues").textContent = String(totalCues);
       document.getElementById("statMergedCount").textContent = String(Math.max(0, mergedCount));
@@ -2178,6 +2209,7 @@ e non l'ho mai trovata.`
 
       document.getElementById("progressStatusTitle").textContent = `✅ 全片共 ${totalCues} 条字幕全部翻译完成！`;
       document.getElementById("progressLiveDetail").textContent = "已自动切换至「看全部字幕」视图，可直接下载完整字幕文件";
+      document.getElementById("completionTitleText").textContent = `✅ 全片共 ${totalCues} 条字幕翻译完成！点击右侧按钮下载或复制：`;
       doneCard.classList.remove("hidden");
 
       // Automatically switch table to show ALL translated cues of the file!
@@ -2191,6 +2223,86 @@ e non l'ho mai trovata.`
       const g = clean.slice(2, 4).toUpperCase();
       const b = clean.slice(4, 6).toUpperCase();
       return `&H00${b}${g}${r}`;
+    }
+
+    let lastExportFilename = "subtitle.srt";
+    let lastExportContent = "";
+
+    function triggerFileExport(filename, content) {
+      lastExportFilename = filename;
+      lastExportContent = content;
+
+      // 1. Trigger standard browser download with delayed URL revocation (fixes synchronous revoke bug!)
+      try {
+        const blob = new Blob(["\uFEFF" + content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          if (a.parentNode) a.parentNode.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 60000);
+      } catch (e) {
+        // Ignore if blocked by iframe sandbox
+      }
+
+      // 2. Also auto-copy to clipboard & open the inline export preview drawer
+      //    so even inside a sandboxed chat iframe where <a download> is blocked, the user gets the file immediately!
+      const drawer = document.getElementById("exportPreviewDrawer");
+      const area = document.getElementById("exportPreviewTextarea");
+      const title = document.getElementById("exportDrawerTitle");
+      const hint = document.getElementById("exportDrawerHint");
+      const copyBtn = document.getElementById("copyExportBtn");
+
+      if (drawer && area) {
+        drawer.classList.remove("hidden");
+        area.value = content;
+        title.textContent = `✅ 已生成：${filename} (共 ${content.split("\n").length} 行)`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(content).then(() => {
+            hint.textContent = "📋 全文已自动复制到你的剪贴板！若聊天窗口沙盒拦截了文件下载，可直接新建文本粘贴，或在独立浏览器网页中点击下载";
+            if (copyBtn) copyBtn.textContent = "✅ 已复制到剪贴板 (点击再复制)";
+          }).catch(() => {
+            hint.textContent = "💡 若聊天窗口沙盒拦截了直接下载文件，请点击右侧「📋 一键复制完整文件内容」";
+          });
+        }
+        drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+
+    function copyExportedContent() {
+      const area = document.getElementById("exportPreviewTextarea");
+      const copyBtn = document.getElementById("copyExportBtn");
+      if (!area) return;
+      area.select();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(area.value);
+      } else {
+        document.execCommand("copy");
+      }
+      if (copyBtn) copyBtn.textContent = "✅ 已复制成功！";
+    }
+
+    async function saveExportViaPicker() {
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: lastExportFilename
+          });
+          const writable = await handle.createWritable();
+          await writable.write(lastExportContent);
+          await writable.close();
+          return;
+        } catch (err) {
+          // User canceled or iframe blocked showSaveFilePicker
+        }
+      }
+      // Fallback: open data URI or re-trigger blob download
+      triggerFileExport(lastExportFilename, lastExportContent);
     }
 
     // Exports the ENTIRE subtitle file (all cues in activeMergedRows / activeUnmergedRows)
@@ -2259,15 +2371,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }).join("\n");
       }
 
-      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerFileExport(filename, content);
     }
 
     async function uploadCustomFont(e, which = "zh") {
@@ -2298,15 +2402,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     }
 
     function downloadRawSourceSrt() {
-      const blob = new Blob([activeRawSrtText], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = activeFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerFileExport(activeFileName, activeRawSrtText);
     }
 
     // Real file upload handler: parses all cues, auto-detects language, merges split sentences, updates table!
