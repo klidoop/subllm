@@ -1991,7 +1991,18 @@ e non l'ho mai trovata.`
     async function translateCueBatchViaApi(rowsBatch, provKey, modelId, apiKey, endpoint) {
       const sourceLang = getEffectiveSourceLang();
       const targetLang = getEffectiveTargetLang();
-      const sysPrompt = `You are a professional cinema subtitle translator. Translate the numbered subtitle lines from ${sourceLang} into natural, idiomatic ${targetLang}. Keep the exact [1]..[N] line prefix on each output line and output ONLY the translated lines.`;
+      const allContextSample = (activeMergedRows.length ? activeMergedRows : activeUnmergedRows)
+        .slice(0, 8)
+        .map(r => r.de)
+        .join(" | ");
+      const sysPrompt = `You are a veteran Criterion Collection & arthouse cinema subtitle translator translating from ${sourceLang} into ${targetLang}.
+CRITICAL SUBTITLE RULES:
+1. NO TRANSLATIONESE (严禁机器翻译腔与欧化长句): Break up clumsy European subordinate clauses into crisp, natural spoken ${targetLang} that an actor would actually say aloud on screen.
+2. DROP REDUNDANT PRONOUNS & FILLERS: Omit unnecessary "你/我/他/它/我们/的/当…的时候" when implied by context.
+3. PRESERVE SUBTEXT & TONE: Capture the emotional tension, sarcasm, intimacy, or literary weight of the scene. Keep sound effects in brackets like [电话铃响].
+4. CINEMA BREVITY: Keep each line concise and rhythmic for instant reading on screen.
+5. STRICT FORMAT: Keep the exact [1]..[N] prefix on each output line and output ONLY the final polished ${targetLang} lines (no explanations, no markdown).
+Scene Context Excerpt: ${allContextSample}`;
       const promptLines = rowsBatch.map((r, i) => `[${i + 1}] ${r.de}`).join("\n");
 
       let resp;
